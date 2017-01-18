@@ -8,7 +8,6 @@ import warnings
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 
-import natcap.invest
 import execution
 
 LOGGER = logging.getLogger(__name__)
@@ -1016,8 +1015,12 @@ class InVESTModelForm(QtGui.QWidget):
 
     def _make_links(self, qlabel):
         links = []
-        version = getattr(natcap.invest, '__version__', 'UNKNOWN')
-        links.append('InVEST Version ' + version)
+        try:
+            import natcap.invest
+            version = getattr(natcap.invest, '__version__', 'UNKNOWN')
+            links.append('InVEST Version ' + version)
+        except (ImportError, AttributeError):
+            pass
 
         try:
             doc_uri = 'file://' + os.path.abspath(self.localdoc)

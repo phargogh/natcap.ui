@@ -32,7 +32,7 @@ class PyQtTest(unittest.TestCase):
 class InputTest(PyQtTest):
     @staticmethod
     def create_input(*args, **kwargs):
-        from natcap.invest.ui.inputs import Input
+        from natcap.ui.inputs import Input
         return Input(*args, **kwargs)
 
     def test_label(self):
@@ -134,7 +134,7 @@ class InputTest(PyQtTest):
         self.assertEqual(input_instance.args_key, None)
 
     def test_add_to_container(self):
-        from natcap.invest.ui.inputs import Container
+        from natcap.ui.inputs import Container
         input_instance = self.__class__.create_input(label='foo')
         container = Container(label='Some container')
         container.add_input(input_instance)
@@ -143,7 +143,7 @@ class InputTest(PyQtTest):
 class GriddedInputTest(InputTest):
     @staticmethod
     def create_input(*args, **kwargs):
-        from natcap.invest.ui.inputs import GriddedInput
+        from natcap.ui.inputs import GriddedInput
         return GriddedInput(*args, **kwargs)
 
     def test_label(self):
@@ -164,7 +164,7 @@ class GriddedInputTest(InputTest):
         self.assertEqual(input_instance.validator, _callback)
 
     def test_helptext(self):
-        from natcap.invest.ui.inputs import HelpButton
+        from natcap.ui.inputs import HelpButton
         input_instance = self.__class__.create_input(label='foo',
                                                      helptext='bar')
         self.assertTrue(isinstance(input_instance.help_button, HelpButton))
@@ -342,7 +342,7 @@ class GriddedInputTest(InputTest):
 class TextTest(GriddedInputTest):
     @staticmethod
     def create_input(*args, **kwargs):
-        from natcap.invest.ui.inputs import Text
+        from natcap.ui.inputs import Text
         return Text(*args, **kwargs)
 
     def test_value(self):
@@ -385,7 +385,7 @@ class TextTest(GriddedInputTest):
 class PathTest(TextTest):
     @staticmethod
     def create_input(*args, **kwargs):
-        from natcap.invest.ui.inputs import _Path
+        from natcap.ui.inputs import _Path
         return _Path(*args, **kwargs)
 
     def test_path_selected(self):
@@ -399,21 +399,21 @@ class PathTest(TextTest):
 class FolderTest(PathTest):
     @staticmethod
     def create_input(*args, **kwargs):
-        from natcap.invest.ui.inputs import Folder
+        from natcap.ui.inputs import Folder
         return Folder(*args, **kwargs)
 
 
 class FileTest(PathTest):
     @staticmethod
     def create_input(*args, **kwargs):
-        from natcap.invest.ui.inputs import File
+        from natcap.ui.inputs import File
         return File(*args, **kwargs)
 
 
 class CheckboxTest(GriddedInputTest):
     @staticmethod
     def create_input(*args, **kwargs):
-        from natcap.invest.ui.inputs import Checkbox
+        from natcap.ui.inputs import Checkbox
         return Checkbox(*args, **kwargs)
 
     def test_value(self):
@@ -501,7 +501,7 @@ class CheckboxTest(GriddedInputTest):
 class DropdownTest(GriddedInputTest):
     @staticmethod
     def create_input(*args, **kwargs):
-        from natcap.invest.ui.inputs import Dropdown
+        from natcap.ui.inputs import Dropdown
         return Dropdown(*args, **kwargs)
 
     def test_options(self):
@@ -574,7 +574,7 @@ class DropdownTest(GriddedInputTest):
 
 class LabelTest(unittest.TestCase):
     def test_add_to_layout(self):
-        from natcap.invest.ui.inputs import Label
+        from natcap.ui.inputs import Label
 
         super_widget = QtGui.QWidget()
         super_widget.setLayout(QtGui.QGridLayout())
@@ -585,7 +585,7 @@ class LabelTest(unittest.TestCase):
 class ContainerTest(InputTest):
     @staticmethod
     def create_input(*args, **kwargs):
-        from natcap.invest.ui.inputs import Container
+        from natcap.ui.inputs import Container
         return Container(*args, **kwargs)
 
     def test_expandable(self):
@@ -665,7 +665,7 @@ class ContainerTest(InputTest):
 class MultiTest(ContainerTest):
     @staticmethod
     def create_input(*args, **kwargs):
-        from natcap.invest.ui.inputs import Multi
+        from natcap.ui.inputs import Multi
 
         if 'callable_' not in kwargs:
             kwargs['callable_'] = MultiTest.create_sample_callable(
@@ -674,7 +674,7 @@ class MultiTest(ContainerTest):
 
     @staticmethod
     def create_sample_callable(*args, **kwargs):
-        from natcap.invest.ui.inputs import Text
+        from natcap.ui.inputs import Text
         return functools.partial(Text, *args, **kwargs)
 
     def test_setup_callable_not_callable(self):
@@ -759,7 +759,7 @@ class MultiTest(ContainerTest):
 
 class ValidationWorkerTest(PyQtTest):
     def test_run(self):
-        from natcap.invest.ui.inputs import ValidationWorker
+        from natcap.ui.inputs import ValidationWorker
         _callable = mock.MagicMock(return_value=[])
         worker = ValidationWorker(
             target=_callable,
@@ -772,7 +772,7 @@ class ValidationWorkerTest(PyQtTest):
         self.assertEqual(worker.error, None)
 
     def test_error(self):
-        from natcap.invest.ui.inputs import ValidationWorker
+        from natcap.ui.inputs import ValidationWorker
         _callable = mock.MagicMock(side_effect=KeyError('missing'))
         worker = ValidationWorker(
             target=_callable,
@@ -787,7 +787,7 @@ class ValidationWorkerTest(PyQtTest):
 
 class FileButtonTest(PyQtTest):
     def test_button_clicked(self):
-        from natcap.invest.ui.inputs import FileButton
+        from natcap.ui.inputs import FileButton
         button = FileButton('Some title')
 
         # Patch up the open_method to return a known path.
@@ -801,14 +801,14 @@ class FileButtonTest(PyQtTest):
         _callback.assert_called_with('/some/path')
 
     def test_button_title(self):
-        from natcap.invest.ui.inputs import FileButton
+        from natcap.ui.inputs import FileButton
         button = FileButton('Some title')
         self.assertEqual(button.dialog_title, 'Some title')
 
 
 class FolderButtonTest(PyQtTest):
     def test_button_clicked(self):
-        from natcap.invest.ui.inputs import FolderButton
+        from natcap.ui.inputs import FolderButton
         button = FolderButton('Some title')
 
         # Patch up the open_method to return a known path.
@@ -822,14 +822,14 @@ class FolderButtonTest(PyQtTest):
         _callback.assert_called_with('/some/path')
 
     def test_button_title(self):
-        from natcap.invest.ui.inputs import FolderButton
+        from natcap.ui.inputs import FolderButton
         button = FolderButton('Some title')
         self.assertEqual(button.dialog_title, 'Some title')
 
 
 class FileDialogTest(PyQtTest):
     def test_save_file_title_and_last_selection(self):
-        from natcap.invest.ui.inputs import FileDialog, DATA
+        from natcap.ui.inputs import FileDialog, DATA
         dialog = FileDialog()
         dialog.getSaveFileName = mock.MagicMock(
             spec=dialog.getSaveFileName,
@@ -844,7 +844,7 @@ class FileDialogTest(PyQtTest):
         self.assertEqual(DATA['last_dir'], u'/new')
 
     def test_save_file_defined_savefile(self):
-        from natcap.invest.ui.inputs import FileDialog
+        from natcap.ui.inputs import FileDialog
         dialog = FileDialog()
         dialog.getSaveFileName = mock.MagicMock(
             spec=dialog.getSaveFileName,
@@ -856,7 +856,7 @@ class FileDialogTest(PyQtTest):
                          (dialog, 'foo', '/tmp/file.txt'))
 
     def test_open_file(self):
-        from natcap.invest.ui.inputs import FileDialog, DATA
+        from natcap.ui.inputs import FileDialog, DATA
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
@@ -873,7 +873,7 @@ class FileDialogTest(PyQtTest):
         self.assertEqual(DATA['last_dir'], '/new')
 
     def test_open_folder(self):
-        from natcap.invest.ui.inputs import FileDialog, DATA
+        from natcap.ui.inputs import FileDialog, DATA
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
@@ -893,7 +893,7 @@ class FileDialogTest(PyQtTest):
 class InfoButtonTest(PyQtTest):
     @unittest.skip("'Always segfaults, don't know why")
     def test_buttonpress(self):
-        from natcap.invest.ui.inputs import InfoButton
+        from natcap.ui.inputs import InfoButton
         button = InfoButton('some text')
         self._APP.processEvents()
         self.assertEqual(button.whatsThis(), 'some text')
@@ -916,7 +916,7 @@ class ModelUITest(PyQtTest):
 
     @staticmethod
     def make_ui(docpage=None, target_mod=None):
-        from natcap.invest.ui.inputs import InVESTModelForm
+        from natcap.ui.inputs import InVESTModelForm
 
         if not target_mod:
             target_mod = ModelUITest
@@ -945,7 +945,7 @@ class ModelUITest(PyQtTest):
         self.assertEqual(len(form.links.text().split('|')), 2)
 
     def test_run_noerror(self):
-        import natcap.invest.ui.inputs
+        import natcap.ui.inputs
         form = ModelUITest.make_ui()
         form.run()
         form._thread.join()
@@ -954,12 +954,12 @@ class ModelUITest(PyQtTest):
         # At the end of the run, the button should be visible.
         self.assertTrue(form.run_dialog.openWorkspaceButton.isVisible())
 
-        with mock.patch('natcap.invest.ui.inputs.open_workspace'):
+        with mock.patch('natcap.ui.inputs.open_workspace'):
             # press the openWorkspaceButton, verify open_workspace called once
             QTest.mouseClick(form.run_dialog.openWorkspaceButton,
                              QtCore.Qt.LeftButton)
             self._APP.processEvents()
-            natcap.invest.ui.inputs.open_workspace.assert_called_once()
+            natcap.ui.inputs.open_workspace.assert_called_once()
 
         # close the window by pressing the back button.
         QTest.mouseClick(form.run_dialog.backButton,
@@ -967,7 +967,7 @@ class ModelUITest(PyQtTest):
         self.assertFalse(form.run_dialog.isVisible())
 
     def test_open_workspace_on_success(self):
-        import natcap.invest.ui.inputs
+        import natcap.ui.inputs
         thread_event = threading.Event()
 
         class _SampleTarget(object):
@@ -990,15 +990,15 @@ class ModelUITest(PyQtTest):
         self._APP.processEvents()
         self.assertTrue(form.run_dialog.openWorkspaceCB.isChecked())
 
-        with mock.patch('natcap.invest.ui.inputs.open_workspace'):
-            natcap.invest.ui.inputs.open_workspace.assert_not_called()
+        with mock.patch('natcap.ui.inputs.open_workspace'):
+            natcap.ui.inputs.open_workspace.assert_not_called()
             thread_event.set()
             self._APP.processEvents()
             form._thread.join()
             while form._thread.is_alive():
                 QTest.QWait(50)
                 self._APP.processEvents()
-            natcap.invest.ui.inputs.open_workspace.assert_called_once()
+            natcap.ui.inputs.open_workspace.assert_called_once()
 
         # close the window by pressing the back button.
         QTest.mouseClick(form.run_dialog.backButton,
@@ -1086,28 +1086,28 @@ class ModelUITest(PyQtTest):
 
 class OpenWorkspaceTest(unittest.TestCase):
     def test_windows(self):
-        from natcap.invest.ui.inputs import open_workspace
+        from natcap.ui.inputs import open_workspace
         with mock.patch('subprocess.Popen') as method:
             with mock.patch('platform.system', return_value='Windows'):
                 open_workspace('/foo/bar')
                 method.assert_called_with('explorer "/foo/bar"')
 
     def test_mac(self):
-        from natcap.invest.ui.inputs import open_workspace
+        from natcap.ui.inputs import open_workspace
         with mock.patch('subprocess.Popen') as method:
             with mock.patch('platform.system', return_value='Darwin'):
                 open_workspace('/foo/bar')
                 method.assert_called_with('open /foo/bar', shell=True)
 
     def test_linux(self):
-        from natcap.invest.ui.inputs import open_workspace
+        from natcap.ui.inputs import open_workspace
         with mock.patch('subprocess.Popen') as method:
             with mock.patch('platform.system', return_value='Linux'):
                 open_workspace('/foo/bar')
                 method.assert_called_with(['xdg-open', '/foo/bar'])
 
     def test_error_in_subprocess(self):
-        from natcap.invest.ui.inputs import open_workspace
+        from natcap.ui.inputs import open_workspace
         with mock.patch('subprocess.Popen',
                         side_effect=OSError('error message')) as patch:
             open_workspace('/foo/bar')
@@ -1116,7 +1116,7 @@ class OpenWorkspaceTest(unittest.TestCase):
 
 class ExecutionTest(unittest.TestCase):
     def test_print_args(self):
-        from natcap.invest.ui.execution import _format_args
+        from natcap.ui.execution import _format_args
 
         args = {
             'some_arg': [1, 2, 3, 4],
@@ -1131,25 +1131,25 @@ class ExecutionTest(unittest.TestCase):
         self.assertEqual(args_string, expected_string)
 
     def test_format_time_hours(self):
-        from natcap.invest.ui.execution import format_time
+        from natcap.ui.execution import format_time
 
         seconds = 3667
         self.assertEqual(format_time(seconds), '1h 1m 7s')
 
     def test_format_time_minutes(self):
-        from natcap.invest.ui.execution import format_time
+        from natcap.ui.execution import format_time
 
         seconds = 67
         self.assertEqual(format_time(seconds), '1m 7s')
 
     def test_format_time_seconds(self):
-        from natcap.invest.ui.execution import format_time
+        from natcap.ui.execution import format_time
 
         seconds = 7
         self.assertEqual(format_time(seconds), '7s')
 
     def test_thread_filter_same_thread(self):
-        from natcap.invest.ui.execution import ThreadFilter
+        from natcap.ui.execution import ThreadFilter
 
         # name, level, pathname, lineno, msg, args, exc_info, func=None
         record = logging.LogRecord(
@@ -1167,7 +1167,7 @@ class ExecutionTest(unittest.TestCase):
         self.assertEqual(filterer.filter(record), True)
 
     def test_thread_filter_different_thread(self):
-        from natcap.invest.ui.execution import ThreadFilter
+        from natcap.ui.execution import ThreadFilter
 
         # name, level, pathname, lineno, msg, args, exc_info, func=None
         record = logging.LogRecord(
@@ -1192,7 +1192,7 @@ class ExecutionTest(unittest.TestCase):
                 self.event = threading.Event()
 
             def run(self):
-                from natcap.invest.ui.execution import log_to_file
+                from natcap.ui.execution import log_to_file
                 with log_to_file(self.filename):
                     _logger = logging.getLogger(__name__)
                     _logger.debug('debug message')
