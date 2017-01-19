@@ -972,6 +972,7 @@ class InVESTModelForm(QtGui.QWidget):
     label = None
     target = None
     localdoc = None
+    version = 'UNKNOWN'
 
     def __init__(self):
         QtGui.QWidget.__init__(self)
@@ -983,7 +984,7 @@ class InVESTModelForm(QtGui.QWidget):
         self.links = QtGui.QLabel()
         self.links.setOpenExternalLinks(True)
         self.links.setAlignment(QtCore.Qt.AlignRight)
-        self._make_links(self.links)
+        self._make_links(self.links, self.version)
         self.layout().addWidget(self.links)
 
         self.inputs = Container(label='')
@@ -1013,12 +1014,10 @@ class InVESTModelForm(QtGui.QWidget):
 
         self.run_dialog = RealtimeMessagesDialog()
 
-    def _make_links(self, qlabel):
+    def _make_links(self, qlabel, version_string):
         links = []
         try:
-            import natcap.invest
-            version = getattr(natcap.invest, '__version__', 'UNKNOWN')
-            links.append('InVEST Version ' + version)
+            links.append('Version ' + version_string)
         except (ImportError, AttributeError):
             pass
 
