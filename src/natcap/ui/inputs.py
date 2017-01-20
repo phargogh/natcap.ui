@@ -4,6 +4,8 @@ import logging
 import platform
 import subprocess
 import warnings
+import sys
+import atexit
 
 from PyQt4 import QtGui
 from PyQt4 import QtCore
@@ -21,6 +23,16 @@ QLABEL_STYLE_INFO = _QLABEL_STYLE_TEMPLATE.format(
     padding='15px', bg_color='#d4efcc', border='2px solid #3e895b')
 QLABEL_STYLE_ERROR = _QLABEL_STYLE_TEMPLATE.format(
     padding='15px', bg_color='#ebabb6', border='2px solid #a23332')
+
+QT_APP = QtGui.QApplication.instance()
+if QT_APP is None:
+    QT_APP = QtGui.QApplication(sys.argv)
+
+def _cleanup():
+    # Adding this allows tests to run on linux via `python setup.py nosetests`
+    # and `python setup.py test` without segfault.
+    QT_APP.deleteLater()
+atexit.register(_cleanup)
 
 
 def _apply_sizehint(widget):
@@ -348,7 +360,7 @@ class ValidationWorker(QtCore.QObject):
         self.started.emit()
 
     def run(self):
-        QtGui.QApplication.processEvents()
+        QT_APP.processEvents()
         # Target must adhere to InVEST validation API.
         LOGGER.info(('Starting validation thread with target=%s, args=%s, '
                      'limit_to=%s'), self.target, self.args, self.limit_to)
@@ -362,7 +374,7 @@ class ValidationWorker(QtCore.QObject):
                              self.target)
         self._finished = True
         self.finished.emit()
-        QtGui.QApplication.processEvents()
+        QT_APP.processEvents()
 
 
 class FileDialog(QtGui.QFileDialog):
@@ -525,7 +537,7 @@ class GriddedInput(Input):
             self.widgets[1] = self.label
             self.label.stateChanged.connect(self._hideability_changed)
             self._hideability_changed(True)
-            QtGui.QApplication.processEvents()
+            QT_APP.processEvents()
 
         self.lock = threading.Lock()
         self._validation_thread = None
@@ -603,13 +615,13 @@ class GriddedInput(Input):
                 self._validation_thread_finished)
             self._validation_worker.start()
 
-            QtGui.QApplication.processEvents()
+            QT_APP.processEvents()
         except Exception:
-            QtGui.QApplication.processEvents()
+            QT_APP.processEvents()
             LOGGER.exception('Error found, releasing lock.')
             self.lock.release()
             raise
-        QtGui.QApplication.processEvents()
+        QT_APP.processEvents()
 
     def _validation_finished(self, new_validity):
         LOGGER.info('Cleaning up validation for %s', self)
@@ -618,7 +630,6 @@ class GriddedInput(Input):
         self.lock.release()
         if current_validity != new_validity:
             self.validity_changed.emit(new_validity)
-            QtGui.QApplication.instance().processEvents()
 
     def _validation_thread_finished(self):
         self._validation_thread.quit()

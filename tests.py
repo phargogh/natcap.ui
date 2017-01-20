@@ -8,15 +8,11 @@ import tempfile
 import shutil
 import os
 import contextlib
-import sys
 
 import mock
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 from PyQt4.QtTest import QTest
-
-
-QT_APP = QtGui.QApplication(sys.argv)
 
 
 @contextlib.contextmanager
@@ -132,7 +128,6 @@ class InputTest(unittest.TestCase):
         finally:
             input_instance.value_changed.disconnect(callback)
 
-    @unittest.skip('signal')
     def test_interactivity_changed_signal(self):
         input_instance = self.__class__.create_input(label='foo')
         callback = mock.MagicMock()
@@ -378,7 +373,6 @@ class TextTest(GriddedInputTest):
         self.assertEqual(input_instance.value(), u'foo')
         self.assertTrue(isinstance(input_instance.value(), unicode))
 
-    @unittest.skip('Skipping signal tests')
     def test_value_changed_signal_emitted(self):
         input_instance = self.__class__.create_input(label='text')
         callback = mock.MagicMock()
@@ -415,7 +409,6 @@ class PathTest(TextTest):
         from natcap.ui.inputs import _Path
         return _Path(*args, **kwargs)
 
-    @unittest.skip('signal')
     def test_path_selected(self):
         input_instance = self.__class__.create_input(label='foo')
         # Only run this test on subclasses of path
@@ -458,7 +451,6 @@ class CheckboxTest(GriddedInputTest):
         input_instance.set_value(True)
         self.assertEqual(input_instance.value(), True)
 
-    @unittest.skip('Skipping signal tests')
     def test_value_changed_signal_emitted(self):
         input_instance = self.__class__.create_input(label='new_label')
         callback = mock.MagicMock()
@@ -470,7 +462,6 @@ class CheckboxTest(GriddedInputTest):
 
         callback.assert_called_with(True)
 
-    @unittest.skip('signal')
     def test_value_changed_signal(self):
         input_instance = self.__class__.create_input(label='new_label')
         callback = mock.MagicMock()
@@ -568,7 +559,6 @@ class DropdownTest(GriddedInputTest):
         self.assertEqual(input_instance.value(), u'foo')
         self.assertTrue(isinstance(input_instance.value(), unicode))
 
-    @unittest.skip('Skipping signal tests')
     def test_value_changed_signal_emitted(self):
         input_instance = self.__class__.create_input(
             label='label', options=('foo', 'bar', 'baz'))
@@ -649,7 +639,6 @@ class ContainerTest(InputTest):
         input_instance.expanded = False
         self.assertEqual(input_instance.expanded, False)
 
-    @unittest.skip('signal')
     def test_value_changed_signal(self):
         input_instance = self.__class__.create_input(label='foo',
                                                      expandable=True)
@@ -661,7 +650,6 @@ class ContainerTest(InputTest):
 
         callback.assert_called_with(True)
 
-    @unittest.skip('Skipping signal tests')
     def test_value_changed_signal_emitted(self):
         input_instance = self.__class__.create_input(label='foo',
                                                      expandable=True,
@@ -730,7 +718,6 @@ class MultiTest(ContainerTest):
                 label='foo',
                 callable_=None)
 
-    @unittest.skip('Skipping signal tests')
     def test_value_changed_signal_emitted(self):
         input_instance = self.__class__.create_input(
             label='foo',
@@ -745,7 +732,6 @@ class MultiTest(ContainerTest):
 
         callback.assert_called_with(['aaa', 'bbb'])
 
-    @unittest.skip('signal')
     def test_value_changed_signal(self):
         input_instance = self.__class__.create_input(
             label='foo',
@@ -791,7 +777,6 @@ class MultiTest(ContainerTest):
 
         self.assertEqual(input_instance.value(), ['aaa', 'ccc'])
 
-    @unittest.skip('signal')
     def test_add_item_by_link(self):
         input_instance = self.__class__.create_input(
             label='foo',
