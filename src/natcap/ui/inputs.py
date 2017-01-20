@@ -344,9 +344,6 @@ class ValidationWorker(QtCore.QObject):
     def isFinished(self):
         return self._finished
 
-    def __del__(self):
-        self.deleteLater()
-
     def start(self):
         self.started.emit()
 
@@ -535,6 +532,8 @@ class GriddedInput(Input):
 
     def __del__(self):
         if self._validation_thread != None:
+            if self._validation_thread.isRunning():
+                self._validation_thread.quit()
             self._validation_thread.deleteLater()
 
     def _validate(self):
