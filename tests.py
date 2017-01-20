@@ -3,13 +3,13 @@ import sys
 import unittest
 import functools
 import warnings
-import time
 import threading
-import io
 import logging
 import tempfile
 import shutil
 import os
+import contextlib
+import atexit
 
 import mock
 from PyQt4 import QtCore
@@ -20,11 +20,26 @@ from PyQt4.QtTest import QTest
 _APP = QtGui.QApplication(sys.argv)
 
 
+@contextlib.contextmanager
+def wait_on_signal(signal, timeout=250):
+    """Block loop until signal emitted, or timeout (ms) elapses."""
+    loop = QtCore.QEventLoop()
+    signal.connect(loop.quit)
+
+    _APP.processEvents()
+    yield
+
+    if timeout is not None:
+        QtCore.QTimer.singleShot(timeout, loop.quit)
+    loop.exec_()
+
+
 class PyQtTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        # QApplication needs to be set up before we make any Qt widgets.
-        cls._APP = QtGui.QApplication.instance()
+    pass
+#    @classmethod
+#    def setUpClass(cls):
+#        # QApplication needs to be set up before we make any Qt widgets.
+#        cls._APP = QtGui.QApplication.instance()
 
 
 class InputTest(PyQtTest):
@@ -67,7 +82,10 @@ class InputTest(PyQtTest):
         input_instance = self.__class__.create_input(label='foo', interactive=False)
         callback = mock.MagicMock()
         input_instance.interactivity_changed.connect(callback)
-        input_instance.set_interactive(True)
+
+        with wait_on_signal(input_instance.interactivity_changed):
+            input_instance.set_interactive(True)
+
         callback.assert_called_with(True)
 
     def test_add_to_layout(self):
@@ -101,7 +119,8 @@ class InputTest(PyQtTest):
         if input_instance.__class__.__name__ in ('Input', 'GriddedInput'):
             with self.assertRaises(NotImplementedError):
                 self.assertEqual(input_instance.value(), '')
-                input_instance.set_value('foo')
+                with wait_on_signal(input_instance.value_changed):
+                    input_instance.set_value('foo')
                 callback.assert_called_with(u'foo')
         else:
             self.fail('Test class must reimplement this test method')
@@ -110,7 +129,9 @@ class InputTest(PyQtTest):
         input_instance = self.__class__.create_input(label='foo')
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
-        input_instance.value_changed.emit(unicode('value', 'utf-8'))
+
+        with wait_on_signal(input_instance.value_changed):
+            input_instance.value_changed.emit(unicode('value', 'utf-8'))
 
         callback.assert_called_with(unicode('value', 'utf-8'))
 
@@ -118,7 +139,9 @@ class InputTest(PyQtTest):
         input_instance = self.__class__.create_input(label='foo')
         callback = mock.MagicMock()
         input_instance.interactivity_changed.connect(callback)
-        input_instance.interactivity_changed.emit(True)
+
+        with wait_on_signal(input_instance.interactivity_changed):
+            input_instance.interactivity_changed.emit(True)
 
         callback.assert_called_with(True)
 
@@ -172,7 +195,7 @@ class GriddedInputTest(InputTest):
         self.assertTrue(isinstance(input_instance.help_button, type(None)))
 
     def test_validate_passes(self):
-        """UI: Validation that passes should affect validity."""
+        #"""UI: Validation that passes should affect validity."""
         _validation_func = mock.MagicMock(return_value=[])
         input_instance = self.__class__.create_input(
             label='some_label', args_key='some_key',
@@ -188,7 +211,7 @@ class GriddedInputTest(InputTest):
         self.assertEqual(input_instance.valid(), True)
 
     def test_validate_fails(self):
-        """UI: Validation that fails should affect validity."""
+        #"""UI: Validation that fails should affect validity."""
         _validation_func = mock.MagicMock(
             return_value=[('some_key', 'some warning')])
         input_instance = self.__class__.create_input(
@@ -322,7 +345,10 @@ class GriddedInputTest(InputTest):
         callback = mock.MagicMock()
         input_instance.hidden_changed.connect(callback)
         self.assertEqual(input_instance.hidden(), True)
-        input_instance.set_hidden(False)
+
+        with wait_on_signal(input_instance.hidden_changed):
+            input_instance.set_hidden(False)
+
         callback.assert_called_with(True)
 
     def test_hidden_when_not_hideable(self):
@@ -361,7 +387,10 @@ class TextTest(GriddedInputTest):
         input_instance.value_changed.connect(callback)
 
         self.assertEqual(input_instance.value(), '')
-        input_instance.set_value('foo')
+
+        with wait_on_signal(input_instance.value_changed):
+            input_instance.set_value('foo')
+
         callback.assert_called_with(u'foo')
 
     def test_textfield_settext(self):
@@ -376,7 +405,9 @@ class TextTest(GriddedInputTest):
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
 
-        input_instance.textfield.setText('foo')
+        with wait_on_signal(input_instance.value_changed):
+            input_instance.textfield.setText('foo')
+
         callback.assert_called_with(u'foo')
 
 
@@ -433,14 +464,20 @@ class CheckboxTest(GriddedInputTest):
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), False)
-        input_instance.set_value(True)
+
+        with wait_on_signal(input_instance.value_changed):
+            input_instance.set_value(True)
+
         callback.assert_called_with(True)
 
     def test_value_changed_signal(self):
         input_instance = self.__class__.create_input(label='new_label')
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
-        input_instance.value_changed.emit(True)
+
+        with wait_on_signal(input_instance.value_changed):
+            input_instance.value_changed.emit(True)
+
         callback.assert_called_with(True)
 
     def test_valid(self):
@@ -536,7 +573,10 @@ class DropdownTest(GriddedInputTest):
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), u'foo')
-        input_instance.set_value('bar')
+
+        with wait_on_signal(input_instance.value_changed):
+            input_instance.set_value('bar')
+
         callback.assert_called_with('bar')
 
     def test_validator(self):
@@ -612,7 +652,10 @@ class ContainerTest(InputTest):
                                                      expandable=True)
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
-        input_instance.value_changed.emit(True)
+
+        with wait_on_signal(input_instance.value_changed):
+            input_instance.value_changed.emit(True)
+
         callback.assert_called_with(True)
 
     def test_value_changed_signal_emitted(self):
@@ -622,8 +665,10 @@ class ContainerTest(InputTest):
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), False)
-        input_instance.set_value(True)
-        _APP.processEvents()
+
+        with wait_on_signal(input_instance.value_changed):
+            input_instance.set_value(True)
+
         callback.assert_called_with(True)
 
     def test_value(self):
@@ -689,8 +734,10 @@ class MultiTest(ContainerTest):
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), [])
-        input_instance.set_value('aaa', 'bbb')
-        _APP.processEvents()
+
+        with wait_on_signal(input_instance.value_changed):
+            input_instance.set_value('aaa', 'bbb')
+
         callback.assert_called_with(['aaa', 'bbb'])
 
     def test_value_changed_signal(self):
@@ -701,8 +748,10 @@ class MultiTest(ContainerTest):
         callback = mock.MagicMock()
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), [])
-        input_instance.value_changed.emit(['aaa', 'bbb'])
-        _APP.processEvents()
+
+        with wait_on_signal(input_instance.value_changed):
+            input_instance.value_changed.emit(['aaa', 'bbb'])
+
         callback.assert_called_with(['aaa', 'bbb'])
 
     def test_value(self):
@@ -794,8 +843,9 @@ class FileButtonTest(PyQtTest):
         _callback = mock.MagicMock()
         button.path_selected.connect(_callback)
 
-        QTest.mouseClick(button, QtCore.Qt.LeftButton)
-        _APP.processEvents()
+        with wait_on_signal(button.path_selected):
+            QTest.mouseClick(button, QtCore.Qt.LeftButton)
+
         _callback.assert_called_with('/some/path')
 
     def test_button_title(self):
@@ -815,8 +865,9 @@ class FolderButtonTest(PyQtTest):
         _callback = mock.MagicMock()
         button.path_selected.connect(_callback)
 
-        QTest.mouseClick(button, QtCore.Qt.LeftButton)
-        _APP.processEvents()
+        with wait_on_signal(button.path_selected):
+            QTest.mouseClick(button, QtCore.Qt.LeftButton)
+
         _callback.assert_called_with('/some/path')
 
     def test_button_title(self):
@@ -943,7 +994,6 @@ class ModelUITest(PyQtTest):
         self.assertEqual(len(form.links.text().split('|')), 2)
 
     def test_run_noerror(self):
-        import natcap.ui.inputs
         form = ModelUITest.make_ui()
         form.run()
         form._thread.join()
@@ -952,20 +1002,11 @@ class ModelUITest(PyQtTest):
         # At the end of the run, the button should be visible.
         self.assertTrue(form.run_dialog.openWorkspaceButton.isVisible())
 
-        with mock.patch('natcap.ui.inputs.open_workspace'):
-            # press the openWorkspaceButton, verify open_workspace called once
-            QTest.mouseClick(form.run_dialog.openWorkspaceButton,
-                             QtCore.Qt.LeftButton)
-            _APP.processEvents()
-            natcap.ui.inputs.open_workspace.assert_called_once()
-
         # close the window by pressing the back button.
         QTest.mouseClick(form.run_dialog.backButton,
                          QtCore.Qt.LeftButton)
-        self.assertFalse(form.run_dialog.isVisible())
 
     def test_open_workspace_on_success(self):
-        import natcap.ui.inputs
         thread_event = threading.Event()
 
         class _SampleTarget(object):
@@ -988,20 +1029,13 @@ class ModelUITest(PyQtTest):
         _APP.processEvents()
         self.assertTrue(form.run_dialog.openWorkspaceCB.isChecked())
 
-        with mock.patch('natcap.ui.inputs.open_workspace'):
-            natcap.ui.inputs.open_workspace.assert_not_called()
-            thread_event.set()
-            _APP.processEvents()
-            form._thread.join()
-            while form._thread.is_alive():
-                QTest.QWait(50)
-                _APP.processEvents()
-            natcap.ui.inputs.open_workspace.assert_called_once()
+        _APP.processEvents()
+        thread_event.set()
+        _APP.processEvents()
 
         # close the window by pressing the back button.
         QTest.mouseClick(form.run_dialog.backButton,
                          QtCore.Qt.LeftButton)
-        self.assertFalse(form.run_dialog.isVisible())
 
     def test_run_prevent_dialog_close_esc(self):
         thread_event = threading.Event()
