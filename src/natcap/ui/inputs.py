@@ -301,8 +301,6 @@ class InfoButton(QtGui.QPushButton):
             self.setWhatsThis(default_message)
         self.clicked.connect(self._show_popup)
 
-
-    @QtCore.pyqtSlot(bool)
     def _show_popup(self, clicked=None):
         QtGui.QWhatsThis.enterWhatsThisMode()
         QtGui.QWhatsThis.showText(self.pos(), self.whatsThis(), self)
@@ -346,11 +344,12 @@ class ValidationWorker(QtCore.QObject):
     def isFinished(self):
         return self._finished
 
-    @QtCore.pyqtSlot()
+    def __del__(self):
+        self.deleteLater()
+
     def start(self):
         self.started.emit()
 
-    @QtCore.pyqtSlot()
     def run(self):
         QtGui.QApplication.processEvents()
         # Target must adhere to InVEST validation API.
@@ -534,6 +533,10 @@ class GriddedInput(Input):
         self.lock = threading.Lock()
         self._validation_thread = None
 
+    def __del__(self):
+        if self._validation_thread != None:
+            self._validation_thread.deleteLater()
+
     def _validate(self):
         self.lock.acquire()
 
@@ -592,14 +595,11 @@ class GriddedInput(Input):
                 self._validation_thread = QtCore.QThread(parent=self)
                 self._validation_thread.start()
 
-            print 'validation worker'
             self._validation_worker = ValidationWorker(
                 target=validator_ref,
                 args=args,
                 limit_to=self.args_key)
-            print 'moving to thread'
             self._validation_worker.moveToThread(self._validation_thread)
-            print 'starting'
             self._validation_worker.finished.connect(
                 self._validation_thread_finished)
             self._validation_worker.start()
@@ -613,7 +613,6 @@ class GriddedInput(Input):
         QtGui.QApplication.processEvents()
 
     def _validation_finished(self, new_validity):
-        print 'validation finished'
         LOGGER.info('Cleaning up validation for %s', self)
         current_validity = self._valid
         self._valid = new_validity
@@ -623,7 +622,6 @@ class GriddedInput(Input):
             QtGui.QApplication.instance().processEvents()
 
     def _validation_thread_finished(self):
-        print 'validation thread finished'
         self._validation_thread.quit()
 
         LOGGER.info('Validation thread finished for %s', self)
@@ -641,7 +639,6 @@ class GriddedInput(Input):
                 QtCore.QThread.msleep(50)
             return self._valid
         except AttributeError:
-            print 'nope!'
             # When validation threads aren't part of the equation.
             return self._valid
 
@@ -649,7 +646,6 @@ class GriddedInput(Input):
         for widget in self.widgets[2:]:
             if not widget:
                 continue
-            print 'updating hideability for', widget
             widget.setHidden(not bool(show_widgets))
         self.hidden_changed.emit(bool(show_widgets))
 
