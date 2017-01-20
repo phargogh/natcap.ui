@@ -546,6 +546,9 @@ class GriddedInput(Input):
         if self._validation_thread != None:
             if self._validation_thread.isRunning():
                 self._validation_thread.quit()
+                self._validation_thread.wait(msecs=200)
+                if self._validation_thread.isRunning():
+                    self._validation_thread.terminate()
             self._validation_thread.deleteLater()
 
     def _validate(self):
