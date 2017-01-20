@@ -5,8 +5,11 @@ import time
 import pprint
 import traceback
 import contextlib
+import tempfile
 
 from PyQt4 import QtCore
+
+from .inputs import QT_APP
 
 LOGGER = logging.getLogger(__name__)
 LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
@@ -79,6 +82,31 @@ def log_to_file(logfile):
     handler.close()
     root_logger.removeHandler(handler)
 
+
+@contextlib.contextmanager
+def manage_tempdir(new_tempdir=None):
+    """Context manager for resetting the previous tempfile.tempdir.
+
+    When the context manager is exited, ``tempfile.tempdir`` is reset to its
+    previous value.
+
+    Parameters:
+        new_tempdir (string): The folder that should be the new temporary
+            directory.  If None, the system default will be used.  See
+            https://docs.python.org/2/library/tempfile.html#tempfile.tempdir
+            for details.
+
+    Returns:
+        ``None``
+    """
+    LOGGER.info('Setting tempfile.tempdir to %s', new_tempdir)
+    previous_tempdir = tempfile.tempdir
+    tempfile.tempdir = new_tempdir
+    yield
+    LOGGER.info('Resetting tempfile.tempdir to %s', previous_tempdir)
+    tempfile.tempdir = previous_tempdir
+
+
 class Executor(QtCore.QObject, threading.Thread):
     """Executor represents a thread of control that runs a python function with
     a single input.  Once created with the proper inputs, threading.Thread has
@@ -102,22 +130,18 @@ class Executor(QtCore.QObject, threading.Thread):
 
     finished = QtCore.pyqtSignal()
 
-    def __init__(self, module, args, func_name='execute', log_file=None, tempdir=None):
-        """Initialization function for the Executor.
-            module - a python module that has already been imported.
-            args - a python dictionary of arguments to be passed to the function
-            func_name='execute'- a string.  Represents the name of the function
-                to be called (e.g. module.func_name).  Defaults to 'execute'.
-        """
+    def __init__(self, target, args, kwargs, log_file, tempdir=None):
         QtCore.QObject.__init__(self)
         threading.Thread.__init__(self)
-        self.module = module
+        self.target = target
         self.args = args
-        self.func_name = func_name
+        self.kwargs = kwargs
+        self.logfile = log_file
+        self.tempdir = tempdir
+
         self.failed = False
         self.exception = None
         self.traceback = None
-        self.tempdir = tempdir
 
     def run(self):
         """Run the python script provided by the user with the arguments
@@ -125,23 +149,15 @@ class Executor(QtCore.QObject, threading.Thread):
         handler.  If an exception is raised in either the loading or execution
         of the module or function, a traceback is printed and the exception is
         saved."""
-        logfile = os.path.join(self.args['workspace_dir'], 'foo.txt')
-        with log_to_file(logfile):
+        with log_to_file(self.logfile), manage_tempdir(self.tempdir):
             start_time = time.time()
             LOGGER.info(_format_args(self.args))
             try:
-                function = getattr(self.module, self.func_name)
-            except AttributeError as error:
-                LOGGER.exception(error)
-                self.failed = True
-                raise AttributeError(('Unable to find function "%s" in module "%s" '
-                    'at %s') % (self.func_name, self.module.__name__,
-                    self.module.__file__))
-            try:
-                LOGGER.debug('Found function %s', function)
-                LOGGER.debug('Starting model with args: \n%s',
-                            pprint.pformat(self.args))
-                function(self.args)
+                LOGGER.debug('Starting target %s with args: \n%s\n%s',
+                             self.target,
+                             pprint.pformat(self.args),
+                             pprint.pformat(self.kwargs))
+                self.target(*self.args, **self.kwargs)
             except Exception as error:
                 # We deliberately want to catch all possible exceptions.
                 LOGGER.exception(error)

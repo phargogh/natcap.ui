@@ -1233,3 +1233,105 @@ class ExecutionTest(unittest.TestCase):
                 self.assertTrue('this should not appear' not in file_contents)
         finally:
             shutil.rmtree(tempdir)
+
+    def test_manage_tempdir(self):
+        from natcap.ui.execution import manage_tempdir
+
+        starting_tempdir = tempfile.gettempdir()
+        new_tempdir = tempfile.mkdtemp()
+        try:
+            with manage_tempdir(new_tempdir=new_tempdir):
+                self.assertEqual(tempfile.gettempdir(), new_tempdir)
+            self.assertEqual(tempfile.gettempdir(), starting_tempdir)
+        finally:
+            shutil.rmtree(new_tempdir)
+
+    def test_executor_run(self):
+        from natcap.ui.execution import Executor
+
+        thread_event = threading.Event()
+
+        def _waiting_func(*args, **kwargs):
+            thread_event.wait()
+
+        target = mock.MagicMock(wraps=_waiting_func)
+        callback = mock.MagicMock()
+        args = ('a', 'b', 'c')
+        kwargs = {'d': 1, 'e': 2, 'f': 3}
+        tempdir = tempfile.mkdtemp()
+        log_file = os.path.join(tempdir, 'logfile.txt')
+
+        try:
+            executor = Executor(
+                target=target,
+                args=args,
+                kwargs=kwargs,
+                log_file=log_file,
+                tempdir=tempdir)
+
+            self.assertEqual(executor.target, target)
+            self.assertEqual(executor.args, args)
+            self.assertEqual(executor.kwargs, kwargs)
+            self.assertEqual(executor.logfile, log_file)
+            self.assertEqual(executor.tempdir, tempdir)
+
+            # register the callback with the finished signal.
+            executor.finished.connect(callback)
+
+            executor.start()
+            thread_event.set()
+            executor.join()
+            QtGui.QApplication.instance().processEvents()
+            callback.assert_called_once()
+            target.assert_called_once()
+            target.assert_called_with(*args, **kwargs)
+
+        finally:
+            shutil.rmtree(tempdir)
+
+    def test_executor_exception(self):
+        from natcap.ui.execution import Executor
+
+        thread_event = threading.Event()
+
+        def _waiting_func(*args, **kwargs):
+            thread_event.wait()
+            raise ValueError('Some demo exception')
+
+        target = mock.MagicMock(wraps=_waiting_func)
+        callback = mock.MagicMock()
+        args = ('a', 'b', 'c')
+        kwargs = {'d': 1, 'e': 2, 'f': 3}
+        tempdir = tempfile.mkdtemp()
+        log_file = os.path.join(tempdir, 'logfile.txt')
+
+        try:
+            executor = Executor(
+                target=target,
+                args=args,
+                kwargs=kwargs,
+                log_file=log_file,
+                tempdir=tempdir)
+
+            self.assertEqual(executor.target, target)
+            self.assertEqual(executor.args, args)
+            self.assertEqual(executor.kwargs, kwargs)
+            self.assertEqual(executor.logfile, log_file)
+            self.assertEqual(executor.tempdir, tempdir)
+
+            # register the callback with the finished signal.
+            executor.finished.connect(callback)
+
+            executor.start()
+            thread_event.set()
+            executor.join()
+            QtGui.QApplication.instance().processEvents()
+            callback.assert_called_once()
+            target.assert_called_once()
+            target.assert_called_with(*args, **kwargs)
+
+            self.assertTrue(executor.failed)
+            self.assertEqual(executor.exception, 'Some demo exception')
+            self.assertTrue(isinstance(executor.traceback, basestring))
+        finally:
+            shutil.rmtree(tempdir)
