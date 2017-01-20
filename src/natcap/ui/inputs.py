@@ -741,6 +741,9 @@ class Checkbox(GriddedInput):
 
     # Re-setting value_changed to adapt to the type requirement.
     value_changed = QtCore.pyqtSignal(bool)
+    # Re-setting interactivity_changed to avoid a segfault while testing on
+    # linux via `python setup.py nosetests`.
+    interactivity_changed = QtCore.pyqtSignal(bool)
 
     def __init__(self, label, helptext=None, interactive=True, args_key=None):
         GriddedInput.__init__(self, label=label, helptext=helptext,
