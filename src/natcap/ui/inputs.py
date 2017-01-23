@@ -7,8 +7,9 @@ import warnings
 import sys
 import atexit
 
-from PyQt4 import QtGui
-from PyQt4 import QtCore
+from qtpy import QtWidgets
+from qtpy import QtWidgets
+from qtpy import QtCore
 
 import execution
 
@@ -24,14 +25,14 @@ QLABEL_STYLE_INFO = _QLABEL_STYLE_TEMPLATE.format(
 QLABEL_STYLE_ERROR = _QLABEL_STYLE_TEMPLATE.format(
     padding='15px', bg_color='#ebabb6', border='2px solid #a23332')
 
-QT_APP = QtGui.QApplication.instance()
+QT_APP = QtWidgets.QApplication.instance()
 if QT_APP is None:
-    QT_APP = QtGui.QApplication(sys.argv)
+    QT_APP = QtWidgets.QApplication(sys.argv)  # pragma: no cover
 
 def _cleanup():
     # Adding this allows tests to run on linux via `python setup.py nosetests`
     # and `python setup.py test` without segfault.
-    QT_APP.deleteLater()
+    QT_APP.deleteLater()  # pragma: no cover
 atexit.register(_cleanup)
 
 
@@ -97,14 +98,14 @@ def center_window(window_ptr):
                 QDialog.
         returns nothing."""
     geometry = window_ptr.frameGeometry()
-    center = QtGui.QDesktopWidget().availableGeometry().center()
+    center = QtWidgets.QDesktopWidget().availableGeometry().center()
     geometry.moveCenter(center)
     window_ptr.move(geometry.topLeft())
 
 
-class MessageArea(QtGui.QLabel):
+class MessageArea(QtWidgets.QLabel):
     def __init__(self):
-        QtGui.QLabel.__init__(self)
+        QtWidgets.QLabel.__init__(self)
         self.setWordWrap(True)
         self.setTextFormat(QtCore.Qt.RichText)
 
@@ -135,12 +136,12 @@ class QLogHandler(logging.StreamHandler):
         self.addFilter(self.thread_filter)
 
 
-class LogMessagePane(QtGui.QPlainTextEdit):
+class LogMessagePane(QtWidgets.QPlainTextEdit):
 
-    message_received = QtCore.pyqtSignal(unicode)
+    message_received = QtCore.Signal(unicode)
 
     def __init__(self):
-        QtGui.QPlainTextEdit.__init__(self)
+        QtWidgets.QPlainTextEdit.__init__(self)
 
         self.setReadOnly(True)
         self.setStyleSheet("QWidget { background-color: White }")
@@ -151,16 +152,16 @@ class LogMessagePane(QtGui.QPlainTextEdit):
 
     def _write(self, message):
         self.insertPlainText(QtCore.QString(message))
-        self.textCursor().movePosition(QtGui.QTextCursor.End)
+        self.textCursor().movePosition(QtWidgets.QTextCursor.End)
         self.setTextCursor(self.textCursor())
 
 
-class RealtimeMessagesDialog(QtGui.QDialog):
+class RealtimeMessagesDialog(QtWidgets.QDialog):
     def __init__(self, window_title=None):
-        QtGui.QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self)
 
         # set window attributes
-        self.setLayout(QtGui.QVBoxLayout())
+        self.setLayout(QtWidgets.QVBoxLayout())
         if not window_title:
             window_title = "Running the model"
         self.setWindowTitle(window_title)
@@ -172,7 +173,7 @@ class RealtimeMessagesDialog(QtGui.QDialog):
         self.cancel = False
 
         # create statusArea-related widgets for the window.
-        self.statusAreaLabel = QtGui.QLabel('Messages:')
+        self.statusAreaLabel = QtWidgets.QLabel('Messages:')
         self.log_messages_pane = LogMessagePane()
         self.loghandler = QLogHandler(self.log_messages_pane)
         self.logger = logging.getLogger()
@@ -182,7 +183,7 @@ class RealtimeMessagesDialog(QtGui.QDialog):
         # create an indeterminate progress bar.  According to the Qt
         # documentation, an indeterminate progress bar is created when a
         # QProgressBar's minimum and maximum are both set to 0.
-        self.progressBar = QtGui.QProgressBar()
+        self.progressBar = QtWidgets.QProgressBar()
         self.progressBar.setMinimum(0)
         self.progressBar.setMaximum(0)
         self.progressBar.setTextVisible(False)
@@ -190,11 +191,11 @@ class RealtimeMessagesDialog(QtGui.QDialog):
         if progress_sizehint.isValid():
             self.progressBar.setMinimumSize(progress_sizehint)
 
-        self.openWorkspaceCB = QtGui.QCheckBox('Open workspace after success')
-        self.openWorkspaceButton = QtGui.QPushButton('Open workspace')
+        self.openWorkspaceCB = QtWidgets.QCheckBox('Open workspace after success')
+        self.openWorkspaceButton = QtWidgets.QPushButton('Open workspace')
         self.openWorkspaceButton.pressed.connect(self._request_workspace)
         self.openWorkspaceButton.setSizePolicy(
-            QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         self.openWorkspaceButton.setMaximumWidth(150)
         self.openWorkspaceButton.setVisible(False)
         self.messageArea = MessageArea()
@@ -208,20 +209,20 @@ class RealtimeMessagesDialog(QtGui.QDialog):
         self.layout().addWidget(self.openWorkspaceCB)
         self.layout().addWidget(self.openWorkspaceButton)
 
-        self.backButton = QtGui.QPushButton(' Back')
+        self.backButton = QtWidgets.QPushButton(' Back')
         self.backButton.setToolTip('Return to parameter list')
 
         # add button icons
-        self.backButton.setIcon(QtGui.QIcon(ICON_ENTER))
+        self.backButton.setIcon(QtWidgets.QIcon(ICON_ENTER))
 
         # disable the 'Back' button by default
         self.backButton.setDisabled(True)
 
         # create the buttonBox (a container for buttons) and add the buttons to
         # the buttonBox.
-        self.buttonBox = QtGui.QDialogButtonBox()
+        self.buttonBox = QtWidgets.QDialogButtonBox()
         self.buttonBox.addButton(
-            self.backButton, QtGui.QDialogButtonBox.AcceptRole)
+            self.backButton, QtWidgets.QDialogButtonBox.AcceptRole)
 
         # connect the buttons to their callback functions.
         self.backButton.clicked.connect(self.closeWindow)
@@ -292,7 +293,7 @@ class RealtimeMessagesDialog(QtGui.QDialog):
         if self.is_executing:
             # Don't allow the window to close if we're executing.
             return
-        QtGui.QDialog.reject(self)
+        QtWidgets.QDialog.reject(self)
 
     def closeEvent(self, event):
         """
@@ -302,20 +303,20 @@ class RealtimeMessagesDialog(QtGui.QDialog):
         if self.is_executing:
             event.ignore()
         else:
-            QtGui.QDialog.closeEvent(self, event)
+            QtWidgets.QDialog.closeEvent(self, event)
 
 
-class InfoButton(QtGui.QPushButton):
+class InfoButton(QtWidgets.QPushButton):
     def __init__(self, default_message=None):
-        QtGui.QPushButton.__init__(self)
+        QtWidgets.QPushButton.__init__(self)
         self.setFlat(True)
         if default_message:
             self.setWhatsThis(default_message)
         self.clicked.connect(self._show_popup)
 
     def _show_popup(self, clicked=None):
-        QtGui.QWhatsThis.enterWhatsThisMode()
-        QtGui.QWhatsThis.showText(self.pos(), self.whatsThis(), self)
+        QtWidgets.QWhatsThis.enterWhatsThisMode()
+        QtWidgets.QWhatsThis.showText(self.pos(), self.whatsThis(), self)
 
 
 class ValidButton(InfoButton):
@@ -340,8 +341,8 @@ class HelpButton(InfoButton):
 
 class ValidationWorker(QtCore.QObject):
 
-    started = QtCore.pyqtSignal()
-    finished = QtCore.pyqtSignal()
+    started = QtCore.Signal()
+    finished = QtCore.Signal()
 
     def __init__(self, target, args, limit_to=None, parent=None):
         QtCore.QObject.__init__(self, parent)
@@ -377,7 +378,7 @@ class ValidationWorker(QtCore.QObject):
         QT_APP.processEvents()
 
 
-class FileDialog(QtGui.QFileDialog):
+class FileDialog(QtWidgets.QFileDialog):
     def save_file(self, title, start_dir=None, savefile=None):
         if not start_dir:
             start_dir = os.path.expanduser(DATA['last_dir'])
@@ -418,13 +419,13 @@ class FileDialog(QtGui.QFileDialog):
         return dirname
 
 
-class _FileSystemButton(QtGui.QPushButton):
+class _FileSystemButton(QtWidgets.QPushButton):
 
     _icon = ICON_FOLDER
-    path_selected = QtCore.pyqtSignal(unicode)
+    path_selected = QtCore.Signal(unicode)
 
     def __init__(self, dialog_title):
-        QtGui.QPushButton.__init__(self)
+        QtWidgets.QPushButton.__init__(self)
         self.dialog_title = dialog_title
         self.dialog = FileDialog()
         self.open_method = None  # This should be overridden
@@ -456,8 +457,8 @@ class FolderButton(_FileSystemButton):
 
 class Input(QtCore.QObject):
 
-    value_changed = QtCore.pyqtSignal(unicode)
-    interactivity_changed = QtCore.pyqtSignal(bool)
+    value_changed = QtCore.Signal(unicode)
+    interactivity_changed = QtCore.Signal(bool)
 
     def __init__(self, label, helptext=None, required=False, interactive=True,
                  args_key=None):
@@ -504,8 +505,8 @@ class Input(QtCore.QObject):
 
 class GriddedInput(Input):
 
-    hidden_changed = QtCore.pyqtSignal(bool)
-    validity_changed = QtCore.pyqtSignal(bool)
+    hidden_changed = QtCore.Signal(bool)
+    validity_changed = QtCore.Signal(bool)
 
     def __init__(self, label, helptext=None, required=False, interactive=True,
                  args_key=None, hideable=False, validator=None):
@@ -516,7 +517,7 @@ class GriddedInput(Input):
 
         self._valid = True
         self.validator = validator
-        self.label = QtGui.QLabel(label)
+        self.label = QtWidgets.QLabel(label)
         self.hideable = hideable
         self.valid_button = ValidButton()
         if helptext:
@@ -533,7 +534,7 @@ class GriddedInput(Input):
         ]
 
         if self.hideable:
-            self.label = QtGui.QCheckBox(self.label.text())
+            self.label = QtWidgets.QCheckBox(self.label.text())
             self.widgets[1] = self.label
             self.label.stateChanged.connect(self._hideability_changed)
             self._hideability_changed(True)
@@ -680,7 +681,7 @@ class Text(GriddedInput):
                               required=required, interactive=interactive,
                               args_key=args_key, hideable=hideable,
                               validator=validator)
-        self.textfield = QtGui.QLineEdit()
+        self.textfield = QtWidgets.QLineEdit()
         self.textfield.textChanged.connect(self._text_changed)
         self.widgets[2] = self.textfield
 
@@ -690,7 +691,7 @@ class Text(GriddedInput):
         self._validate()
 
     def value(self):
-        return unicode(self.textfield.text(), 'utf-8')
+        return self.textfield.text()
 
     def set_value(self, value):
         self.textfield.setText(value)
@@ -740,17 +741,17 @@ class File(_Path):
 class Checkbox(GriddedInput):
 
     # Re-setting value_changed to adapt to the type requirement.
-    value_changed = QtCore.pyqtSignal(bool)
+    value_changed = QtCore.Signal(bool)
     # Re-setting interactivity_changed to avoid a segfault while testing on
     # linux via `python setup.py nosetests`.
-    interactivity_changed = QtCore.pyqtSignal(bool)
+    interactivity_changed = QtCore.Signal(bool)
 
     def __init__(self, label, helptext=None, interactive=True, args_key=None):
         GriddedInput.__init__(self, label=label, helptext=helptext,
                               interactive=interactive, args_key=args_key,
                               hideable=False, validator=None)
 
-        self.checkbox = QtGui.QCheckBox(label)
+        self.checkbox = QtWidgets.QCheckBox(label)
         self.checkbox.stateChanged.connect(self.value_changed.emit)
         self.widgets[0] = None  # No need for a valid button
         self.widgets[1] = self.checkbox  # replace label with checkbox
@@ -771,7 +772,7 @@ class Dropdown(GriddedInput):
         GriddedInput.__init__(self, label=label, helptext=helptext,
                               interactive=interactive, args_key=args_key,
                               hideable=hideable, validator=None)
-        self.dropdown = QtGui.QComboBox()
+        self.dropdown = QtWidgets.QComboBox()
         self.widgets[2] = self.dropdown
         self.set_options(options)
         self.dropdown.currentIndexChanged.connect(self._index_changed)
@@ -796,7 +797,7 @@ class Dropdown(GriddedInput):
         self.user_options = options
 
     def value(self):
-        return unicode(self.dropdown.currentText(), 'utf-8')
+        return self.dropdown.currentText()
 
     def set_value(self, value):
         # Handle case where value is of the type provided by the user,
@@ -808,9 +809,9 @@ class Dropdown(GriddedInput):
         self.dropdown.setCurrentIndex(index)
 
 
-class Label(QtGui.QLabel):
+class Label(QtWidgets.QLabel):
     def __init__(self, *args, **kwargs):
-        QtGui.QLabel.__init__(self, *args, **kwargs)
+        QtWidgets.QLabel.__init__(self, *args, **kwargs)
         self.setWordWrap(True)
         self.setOpenExternalLinks(True)
 
@@ -821,22 +822,22 @@ class Label(QtGui.QLabel):
                          layout.columnCount())  # span all columns
 
 
-class Container(QtGui.QGroupBox, Input):
+class Container(QtWidgets.QGroupBox, Input):
 
     # need to redefine signals here.
-    value_changed = QtCore.pyqtSignal(bool)
-    interactivity_changed = QtCore.pyqtSignal(bool)
+    value_changed = QtCore.Signal(bool)
+    interactivity_changed = QtCore.Signal(bool)
 
     def __init__(self, label, interactive=True, expandable=False,
                  expanded=True, args_key=None):
-        QtGui.QGroupBox.__init__(self)
+        QtWidgets.QGroupBox.__init__(self)
         Input.__init__(self, label=label, interactive=interactive,
                        args_key=args_key)
         self.setCheckable(expandable)
         if self.isCheckable():
             self.setChecked(expanded)
         self.setTitle(label)
-        self.setLayout(QtGui.QGridLayout())
+        self.setLayout(QtWidgets.QGridLayout())
         self.toggled.connect(self.value_changed.emit)
 
     @property
@@ -879,14 +880,14 @@ class Container(QtGui.QGroupBox, Input):
 
 class Multi(Container):
 
-    value_changed = QtCore.pyqtSignal(list)
+    value_changed = QtCore.Signal(list)
 
-    class _RemoveButton(QtGui.QPushButton):
+    class _RemoveButton(QtWidgets.QPushButton):
 
-        remove_requested = QtCore.pyqtSignal(int)
+        remove_requested = QtCore.Signal(int)
 
         def __init__(self, label, index):
-            QtGui.QPushButton.__init__(self, label)
+            QtWidgets.QPushButton.__init__(self, label)
             self.index = index
             self.clicked.connect(self._remove)
 
@@ -906,7 +907,7 @@ class Multi(Container):
             raise ValueError("Callable passed to Multi is not callable.")
 
         self.callable_ = callable_
-        self.add_link = QtGui.QLabel('<a href="add_new">%s</a>' % link_text)
+        self.add_link = QtWidgets.QLabel('<a href="add_new">%s</a>' % link_text)
         self.add_link.linkActivated.connect(self._add_templated_item)
         self._append_add_link()
         self.items = []
@@ -986,14 +987,20 @@ class InVESTModelForm(QtGui.QWidget):
     localdoc = None
     version = 'UNKNOWN'
 
-    def __init__(self):
-        QtGui.QWidget.__init__(self)
+    submitted = QtCore.Signal()
+
+    def __init__(self, target):
+        QtWidgets.QWidget.__init__(self)
+        self.target = target
+        if not hasattr(self.target, '__call__'):
+            raise ValueError('Target %s must be callable' % target)
+
         if self.label:
             self.setWindowTitle(self.label)
 
-        self.setLayout(QtGui.QVBoxLayout())
+        self.setLayout(QtWidgets.QVBoxLayout())
 
-        self.links = QtGui.QLabel()
+        self.links = QtWidgets.QLabel()
         self.links.setOpenExternalLinks(True)
         self.links.setAlignment(QtCore.Qt.AlignRight)
         self._make_links(self.links, self.version)
@@ -1015,12 +1022,12 @@ class InVESTModelForm(QtGui.QWidget):
         self.add_input(self.workspace)
         self.add_input(self.suffix)
 
-        self.buttonbox = QtGui.QDialogButtonBox()
-        self.run_button = QtGui.QPushButton(' Run')
-        self.run_button.setIcon(QtGui.QIcon(ICON_ENTER))
+        self.buttonbox = QtWidgets.QDialogButtonBox()
+        self.run_button = QtWidgets.QPushButton(' Run')
+        self.run_button.setIcon(QtWidgets.QIcon(ICON_ENTER))
 
         self.buttonbox.addButton(
-            self.run_button, QtGui.QDialogButtonBox.AcceptRole)
+            self.run_button, QtWidgets.QDialogButtonBox.AcceptRole)
         self.layout().addWidget(self.buttonbox)
         self.run_button.pressed.connect(self.run)
 
@@ -1047,7 +1054,7 @@ class InVESTModelForm(QtGui.QWidget):
 
     def run(self):
         args = self.assemble_args()
-        self._thread = execution.Executor(self.target, args)
+        self._thread = execution.Executor(target, args, kwargs)
         self._thread.finished.connect(self._run_finished)
 
         self.run_dialog.loghandler.watch_thread(self._thread.name)
@@ -1064,7 +1071,7 @@ class InVESTModelForm(QtGui.QWidget):
     def showEvent(self, event=None):
         _apply_sizehint(self.inputs)
         # adjust the window size when we show it.
-        screen_geometry = QtGui.QDesktopWidget().availableGeometry()
+        screen_geometry = QtWidgets.QDesktopWidget().availableGeometry()
 
         # 50 pads the width by a scrollbar or so
         # 100 pads the width for the scrollbar and a little more.
@@ -1077,7 +1084,7 @@ class InVESTModelForm(QtGui.QWidget):
 
         self.resize(width, height)
         self.raise_()  # bring the window to the front.  Needed on macs.
-        QtGui.QWidget.showEvent(self, event)
+        QtWidgets.QWidget.showEvent(self, event)
 
     def add_input(self, input):
         self.inputs.add_input(input)

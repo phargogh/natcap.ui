@@ -11,7 +11,7 @@ setup(
     package_dir={'natcap': 'src/natcap'},
     include_package_data=True,
     # PyQt4/5 don't play nicely with pip/pypi.
-    install_requires=('natcap.versioner>=0.4.2'),
+    install_requires=('natcap.versioner>=0.4.2', 'qtpy'),
     setup_requires=('natcap.versioner>=0.4.2',),
     license='GPL',
     test_suite='nose.collector'

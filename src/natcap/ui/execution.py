@@ -7,9 +7,8 @@ import traceback
 import contextlib
 import tempfile
 
-from PyQt4 import QtCore
+from qtpy import QtCore
 
-from .inputs import QT_APP
 
 LOGGER = logging.getLogger(__name__)
 LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
@@ -128,7 +127,7 @@ class Executor(QtCore.QObject, threading.Thread):
     designed to be run once.  To run the same function again, it is best to
     create a new Executor instance and run that."""
 
-    finished = QtCore.pyqtSignal()
+    finished = QtCore.Signal()
 
     def __init__(self, target, args, kwargs, log_file, tempdir=None):
         QtCore.QObject.__init__(self)

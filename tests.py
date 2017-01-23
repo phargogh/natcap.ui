@@ -9,10 +9,14 @@ import shutil
 import os
 import contextlib
 
+
+import sip
+sip.setapi('QString', 2)  # qtpy assumes api version 2
+from qtpy import QtCore
+from qtpy import QtGui
+from qtpy import QtWidgets
+from qtpy.QtTest import QTest
 import mock
-from PyQt4 import QtCore
-from PyQt4 import QtGui
-from PyQt4.QtTest import QTest
 
 
 @contextlib.contextmanager
@@ -76,8 +80,8 @@ class InputTest(unittest.TestCase):
         callback.assert_called_with(True)
 
     def test_add_to_layout(self):
-        base_widget = QtGui.QWidget()
-        base_widget.setLayout(QtGui.QGridLayout())
+        base_widget = QtWidgets.QWidget()
+        base_widget.setLayout(QtWidgets.QGridLayout())
 
         input_instance = self.__class__.create_input(label='foo')
         input_instance._add_to(base_widget.layout())
@@ -162,13 +166,13 @@ class GriddedInputTest(InputTest):
 
     def test_label(self):
         input_instance = self.__class__.create_input(label='foo')
-        label_text = unicode(input_instance.label.text(), 'utf-8')
+        label_text = input_instance.label.text()
         self.assertEqual(label_text,  u'foo (Optional)')
 
     def test_label_required(self):
         input_instance = self.__class__.create_input(label='foo',
                                                      required=True)
-        label_text = unicode(input_instance.label.text(), 'utf-8')
+        label_text = input_instance.label.text()
         self.assertEqual(label_text, 'foo')
 
     def test_validator(self):
@@ -276,10 +280,9 @@ class GriddedInputTest(InputTest):
         with self.assertRaises(RuntimeError):
             input_instance._validate()
 
-
     def test_nonhideable_default_state(self):
-        sample_widget = QtGui.QWidget()
-        sample_widget.setLayout(QtGui.QGridLayout())
+        sample_widget = QtWidgets.QWidget()
+        sample_widget.setLayout(QtWidgets.QGridLayout())
         input_instance = self.__class__.create_input(
             label='some_label', hideable=False)
         input_instance._add_to(sample_widget.layout())
@@ -303,8 +306,8 @@ class GriddedInputTest(InputTest):
             input_instance.set_hidden(False)
 
     def test_hideable_set_hidden(self):
-        sample_widget = QtGui.QWidget()
-        sample_widget.setLayout(QtGui.QGridLayout())
+        sample_widget = QtWidgets.QWidget()
+        sample_widget.setLayout(QtWidgets.QGridLayout())
         input_instance = self.__class__.create_input(
             label='some_label', hideable=True)
         input_instance._add_to(sample_widget.layout())
@@ -606,8 +609,8 @@ class LabelTest(unittest.TestCase):
     def test_add_to_layout(self):
         from natcap.ui.inputs import Label
 
-        super_widget = QtGui.QWidget()
-        super_widget.setLayout(QtGui.QGridLayout())
+        super_widget = QtWidgets.QWidget()
+        super_widget.setLayout(QtWidgets.QGridLayout())
         label = Label('Hello, World!')
         label._add_to(super_widget.layout())
 
@@ -1281,7 +1284,7 @@ class ExecutionTest(unittest.TestCase):
             executor.start()
             thread_event.set()
             executor.join()
-            QtGui.QApplication.instance().processEvents()
+            QtWidgets.QApplication.instance().processEvents()
             callback.assert_called_once()
             target.assert_called_once()
             target.assert_called_with(*args, **kwargs)
@@ -1325,7 +1328,7 @@ class ExecutionTest(unittest.TestCase):
             executor.start()
             thread_event.set()
             executor.join()
-            QtGui.QApplication.instance().processEvents()
+            QtWidgets.QApplication.instance().processEvents()
             callback.assert_called_once()
             target.assert_called_once()
             target.assert_called_with(*args, **kwargs)
