@@ -1331,7 +1331,8 @@ class ExecutionTest(unittest.TestCase):
             target.assert_called_with(*args, **kwargs)
 
             self.assertTrue(executor.failed)
-            self.assertEqual(executor.exception, 'Some demo exception')
+            self.assertEqual(str(executor.exception),
+                             'Some demo exception')
             self.assertTrue(isinstance(executor.traceback, basestring))
         finally:
             shutil.rmtree(tempdir)
