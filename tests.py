@@ -874,44 +874,47 @@ class FileDialogTest(unittest.TestCase):
     def test_save_file_title_and_last_selection(self):
         from natcap.ui.inputs import FileDialog, DATA
         dialog = FileDialog()
-        dialog.getSaveFileName = mock.MagicMock(
-            spec=dialog.getSaveFileName,
+        dialog.file_dialog.getSaveFileName = mock.MagicMock(
+            spec=dialog.file_dialog.getSaveFileName,
             return_value='/new/file')
 
         DATA['last_dir'] = '/tmp/foo/bar'
 
         out_file = dialog.save_file(title='foo', start_dir=None)
-        self.assertEqual(dialog.getSaveFileName.call_args[0],  # pos. args
-                         (dialog, 'foo', '/tmp/foo/bar'))
+        self.assertEqual(
+            dialog.file_dialog.getSaveFileName.call_args[0],  # pos. args
+            (dialog.file_dialog, 'foo', '/tmp/foo/bar'))
         self.assertEqual(out_file, '/new/file')
         self.assertEqual(DATA['last_dir'], u'/new')
 
     def test_save_file_defined_savefile(self):
         from natcap.ui.inputs import FileDialog
         dialog = FileDialog()
-        dialog.getSaveFileName = mock.MagicMock(
-            spec=dialog.getSaveFileName,
+        dialog.file_dialog.getSaveFileName = mock.MagicMock(
+            spec=dialog.file_dialog.getSaveFileName,
             return_value='/new/file')
 
         out_file = dialog.save_file(title='foo', start_dir='/tmp',
                                     savefile='file.txt')
-        self.assertEqual(dialog.getSaveFileName.call_args[0],  # pos. args
-                         (dialog, 'foo', '/tmp/file.txt'))
+        self.assertEqual(
+            dialog.file_dialog.getSaveFileName.call_args[0],  # pos. args
+            (dialog.file_dialog, 'foo', '/tmp/file.txt'))
 
     def test_open_file(self):
         from natcap.ui.inputs import FileDialog, DATA
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
-        dialog.getOpenFileName = mock.MagicMock(
-            spec=dialog.getOpenFileName,
+        dialog.file_dialog.getOpenFileName = mock.MagicMock(
+            spec=dialog.file_dialog.getOpenFileName,
             return_value='/new/file')
 
         DATA['last_dir'] = '/tmp/foo/bar'
 
         out_file = dialog.open_file(title='foo')
-        self.assertEqual(dialog.getOpenFileName.call_args[0],  # pos. args
-                         (dialog, 'foo', '/tmp/foo/bar'))
+        self.assertEqual(
+            dialog.file_dialog.getOpenFileName.call_args[0],  # pos. args
+            (dialog.file_dialog, 'foo', '/tmp/foo/bar'))
         self.assertEqual(out_file, '/new/file')
         self.assertEqual(DATA['last_dir'], '/new')
 
@@ -920,15 +923,15 @@ class FileDialogTest(unittest.TestCase):
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
-        dialog.getExistingDirectory = mock.MagicMock(
-            spec=dialog.getExistingDirectory,
+        dialog.file_dialog.getExistingDirectory = mock.MagicMock(
+            spec=dialog.file_dialog.getExistingDirectory,
             return_value='/existing/folder')
 
         DATA['last_dir'] = '/tmp/foo/bar'
         new_folder = dialog.open_folder('foo', start_dir=None)
 
-        self.assertEqual(dialog.getExistingDirectory.call_args[0],
-                         (dialog, 'Select folder: foo', '/tmp/foo/bar'))
+        self.assertEqual(dialog.file_dialog.getExistingDirectory.call_args[0],
+                         (dialog.file_dialog, 'Select folder: foo', '/tmp/foo/bar'))
         self.assertEqual(new_folder, '/existing/folder')
         self.assertEqual(DATA['last_dir'], '/existing/folder')
 

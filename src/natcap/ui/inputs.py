@@ -8,7 +8,6 @@ import sys
 import atexit
 
 from qtpy import QtWidgets
-from qtpy import QtWidgets
 from qtpy import QtCore
 
 import execution
@@ -378,7 +377,14 @@ class ValidationWorker(QtCore.QObject):
         QT_APP.processEvents()
 
 
-class FileDialog(QtWidgets.QFileDialog):
+class FileDialog(object):
+    def __init__(self):
+        object.__init__(self)
+        self.file_dialog = QtWidgets.QFileDialog()
+
+    def __del__(self):
+        self.file_dialog.deleteLater()
+
     def save_file(self, title, start_dir=None, savefile=None):
         if not start_dir:
             start_dir = os.path.expanduser(DATA['last_dir'])
@@ -392,7 +398,7 @@ class FileDialog(QtWidgets.QFileDialog):
             # If we pass a folder, the dialog will open to the folder
             default_path = start_dir
 
-        filename = self.getSaveFileName(self, title, default_path)
+        filename = self.file_dialog.getSaveFileName(self.file_dialog, title, default_path)
         DATA['last_dir'] = os.path.dirname(unicode(filename))
         return filename
 
@@ -403,7 +409,7 @@ class FileDialog(QtWidgets.QFileDialog):
         # Allow us to open folders with spaces in them.
         os.path.normpath(start_dir)
 
-        filename = self.getOpenFileName(self, title, start_dir)
+        filename = self.file_dialog.getOpenFileName(self.file_dialog, title, start_dir)
         DATA['last_dir'] = os.path.dirname(unicode(filename))
         return filename
 
@@ -412,8 +418,8 @@ class FileDialog(QtWidgets.QFileDialog):
             start_dir = os.path.expanduser(DATA['last_dir'])
         dialog_title = 'Select folder: ' + title
 
-        dirname = self.getExistingDirectory(self, dialog_title,
-                                            start_dir)
+        dirname = self.file_dialog.getExistingDirectory(self.file_dialog, dialog_title,
+                                                        start_dir)
         dirname = unicode(dirname)
         DATA['last_dir'] = dirname
         return dirname
