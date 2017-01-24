@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import os
 import contextlib
+import sys
 
 import sip
 sip.setapi('QString', 2)  # qtpy assumes api version 2
@@ -17,10 +18,14 @@ from qtpy import QtWidgets
 from qtpy.QtTest import QTest
 import mock
 
-QT_APP = QtGui.QApplication.instance()
+try:
+    QApplication = QtGui.QApplication
+except AttributeError:
+    QApplication = QtWidgets.QApplication
+
+QT_APP = QApplication.instance()
 if QT_APP is None:
-    import sys
-    QT_APP = QtGui.QApplication(sys.argv)
+    QT_APP = QApplication(sys.argv)
 
 LOGGER = logging.getLogger(__name__)
 

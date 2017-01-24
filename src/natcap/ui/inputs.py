@@ -25,9 +25,14 @@ QLABEL_STYLE_INFO = _QLABEL_STYLE_TEMPLATE.format(
 QLABEL_STYLE_ERROR = _QLABEL_STYLE_TEMPLATE.format(
     padding='15px', bg_color='#ebabb6', border='2px solid #a23332')
 
-QT_APP = QtWidgets.QApplication.instance()
+try:
+    QApplication = QtGui.QApplication
+except AttributeError:
+    QApplication = QtWidgets.QApplication
+
+QT_APP = QApplication.instance()
 if QT_APP is None:
-    QT_APP = QtWidgets.QApplication(sys.argv)  # pragma: no cover
+    QT_APP = QApplication(sys.argv)  # pragma: no cover
 
 def _cleanup():
     # Adding this allows tests to run on linux via `python setup.py nosetests`
