@@ -9,7 +9,6 @@ import shutil
 import os
 import contextlib
 
-
 import sip
 sip.setapi('QString', 2)  # qtpy assumes api version 2
 from qtpy import QtCore
@@ -17,6 +16,13 @@ from qtpy import QtGui
 from qtpy import QtWidgets
 from qtpy.QtTest import QTest
 import mock
+
+QT_APP = QtGui.QApplication.instance()
+if QT_APP is None:
+    import sys
+    QT_APP = QtGui.QApplication(sys.argv)
+
+LOGGER = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
@@ -965,8 +971,9 @@ class FormTest(unittest.TestCase):
 
     def test_run_noerror(self):
         form = FormTest.make_ui()
-        form.run(target=lambda x: None)
+        form.run(target=lambda: None)
         form._thread.join()
+        QT_APP.processEvents()
 
         # At the end of the run, the button should be visible.
         self.assertTrue(form.run_dialog.openWorkspaceButton.isVisible())
@@ -1040,18 +1047,32 @@ class FormTest(unittest.TestCase):
             def execute(args):
                 thread_event.wait()
 
-        target_mod = _SampleTarget().execute
         form = FormTest.make_ui()
-        form.run(target=target_mod)
-        form.run_dialog.close()
-        self.assertTrue(form.run_dialog.isVisible())
+        QT_APP.processEvents()
+        target_mod = _SampleTarget().execute
+        try:
+            form.run(target=target_mod, kwargs={'args': {'a': 1}})
+            self.assertTrue(form.run_dialog.isVisible())
+            QT_APP.processEvents()
+            form.run_dialog.close()
+            QT_APP.processEvents()
+            self.assertTrue(form.run_dialog.isVisible())
 
-        # when the execute function finishes, pressing escape should
-        # close the window.
-        thread_event.set()
-        form._thread.join()
-        form.run_dialog.close()
-        self.assertFalse(form.run_dialog.isVisible())
+            # when the execute function finishes, pressing escape should
+            # close the window.
+            thread_event.set()
+            form._thread.join()
+            QT_APP.processEvents()
+            form.run_dialog.close()
+            QT_APP.processEvents()
+            self.assertFalse(form.run_dialog.isVisible())
+        except Exception as error:
+            LOGGER.exception('Something failed')
+            # If something happens while executing, be sure the thread executes
+            # cleanly.
+            thread_event.set()
+            form._thread.join()
+            self.fail(error)
 
     def test_run_error(self):
         class _SampleTarget(object):
@@ -1065,8 +1086,9 @@ class FormTest(unittest.TestCase):
 
         target_mod = _SampleTarget().execute
         form = FormTest.make_ui()
-        form.run(target=target_mod)
+        form.run(target=target_mod, kwargs={'args': {}})
         form._thread.join()
+        QT_APP.processEvents()
 
         self.assertTrue('encountered' in form.run_dialog.messageArea.text())
 

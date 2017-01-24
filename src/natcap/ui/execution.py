@@ -133,10 +133,19 @@ class Executor(QtCore.QObject, threading.Thread):
         QtCore.QObject.__init__(self)
         threading.Thread.__init__(self)
         self.target = target
-        self.args = args
-        self.kwargs = kwargs
-        self.logfile = logfile
         self.tempdir = tempdir
+
+        if not args:
+            args = ()
+        self.args = args
+
+        if not kwargs:
+            kwargs = {}
+        self.kwargs = kwargs
+
+        if logfile is None:
+            logfile = os.path.join(tempfile.mkdtemp(), 'logfile.txt')
+        self.logfile = logfile
 
         self.failed = False
         self.exception = None

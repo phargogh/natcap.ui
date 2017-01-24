@@ -156,18 +156,18 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
         self.setTextCursor(self.textCursor())
 
 
-class FileSystemRunDialog(object):
+class FileSystemRunDialog(QtWidgets.QDialog):
     def __init__(self):
+        QtWidgets.QDialog.__init__(self)
 
         self.is_executing = False
         self.cancel = False
         self.out_folder = None
 
-        self.dialog = QtWidgets.QDialog()
-        self.dialog.setLayout(QtWidgets.QVBoxLayout())
-        self.dialog.resize(700, 500)
-        center_window(self.dialog)
-        self.dialog.setModal(True)
+        self.setLayout(QtWidgets.QVBoxLayout())
+        self.resize(700, 500)
+        center_window(self)
+        self.setModal(True)
 
         # create statusArea-related widgets for the window.
         self.statusAreaLabel = QtWidgets.QLabel('Messages:')
@@ -201,12 +201,12 @@ class FileSystemRunDialog(object):
         self.messageArea.clear()
 
         # Add the new widgets to the window
-        self.dialog.layout().addWidget(self.statusAreaLabel)
-        self.dialog.layout().addWidget(self.log_messages_pane)
-        self.dialog.layout().addWidget(self.messageArea)
-        self.dialog.layout().addWidget(self.progressBar)
-        self.dialog.layout().addWidget(self.openWorkspaceCB)
-        self.dialog.layout().addWidget(self.openWorkspaceButton)
+        self.layout().addWidget(self.statusAreaLabel)
+        self.layout().addWidget(self.log_messages_pane)
+        self.layout().addWidget(self.messageArea)
+        self.layout().addWidget(self.progressBar)
+        self.layout().addWidget(self.openWorkspaceCB)
+        self.layout().addWidget(self.openWorkspaceButton)
 
         self.backButton = QtWidgets.QPushButton(' Back')
         self.backButton.setToolTip('Return to parameter list')
@@ -227,21 +227,21 @@ class FileSystemRunDialog(object):
         self.backButton.clicked.connect(self.closeWindow)
 
         # add the buttonBox to the window.
-        self.dialog.layout().addWidget(self.buttonBox)
+        self.layout().addWidget(self.buttonBox)
 
         # Customize the window title bar to disable the close/minimize/mazimize
         # buttons, just showing the title of the modal dialog.
-        self.dialog.setWindowFlags(
+        self.setWindowFlags(
             QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowTitleHint)
 
     def __del__(self):
         self.logger.removeHandler(self.loghandler)
-        self.dialog.deleteLater()
+        self.deleteLater()
 
     def start(self, window_title, out_folder):
         if not window_title:
             window_title = "Running ..."
-        self.dialog.setWindowTitle(window_title)
+        self.setWindowTitle(window_title)
         self.out_folder = out_folder
 
         self.is_executing = True
@@ -1049,7 +1049,9 @@ class Form(QtWidgets.QWidget):
         self.run_dialog.loghandler.watch_thread(self._thread.name)
         self.run_dialog.start(window_title=window_title,
                               out_folder=out_folder)
-        self.run_dialog.dialog.show()
+        QT_APP.processEvents()
+        self.run_dialog.show()
+        QT_APP.processEvents()
         self._thread.start()
 
     def _run_finished(self):
