@@ -948,8 +948,7 @@ class InfoButtonTest(unittest.TestCase):
         QTest.mouseClick(button, QtCore.Qt.LeftButton)
         #self.assertTrue(QtGui.QWhatsThis.inWhatsThisMode())
 
-@unittest.skip('ModelUI will be part of InVEST')
-class ModelUITest(unittest.TestCase):
+class FormTest(unittest.TestCase):
     @staticmethod
     def validate(args, limit_to=None):
         return []
@@ -959,38 +958,14 @@ class ModelUITest(unittest.TestCase):
         pass
 
     @staticmethod
-    def make_ui(docpage=None, target_mod=None):
-        from natcap.ui.inputs import InVESTModelForm
+    def make_ui():
+        from natcap.ui.inputs import Form
 
-        if not target_mod:
-            target_mod = ModelUITest
-
-        class Sample(InVESTModelForm):
-            label = 'Sample UI'
-            target = target_mod
-            localdoc = docpage
-
-            def assemble_args(self):
-                return {
-                    self.workspace.args_key: self.workspace.value(),
-                    self.suffix.args_key: self.suffix.value(),
-                }
-
-        return Sample()
-
-    def test_with_docs(self):
-        form = ModelUITest.make_ui(docpage='foo.html')
-        self.assertTrue('foo.html' in form.links.text())
-        self.assertEqual(len(form.links.text().split('|')), 3)
-
-    def test_without_docs(self):
-        form = ModelUITest.make_ui(docpage=None)
-        # links widget will contain version and forums link, no docs.
-        self.assertEqual(len(form.links.text().split('|')), 2)
+        return Form()
 
     def test_run_noerror(self):
-        form = ModelUITest.make_ui()
-        form.run()
+        form = FormTest.make_ui()
+        form.run(target=lambda x: None)
         form._thread.join()
 
         # At the end of the run, the button should be visible.
@@ -1012,8 +987,9 @@ class ModelUITest(unittest.TestCase):
             def execute(args):
                 thread_event.wait()
 
-        form = ModelUITest.make_ui(target_mod=_SampleTarget())
-        form.run()
+        form = FormTest.make_ui()
+        target = _SampleTarget().execute
+        form.run(target=target)
 
         self.assertTrue(form.run_dialog.openWorkspaceCB.isVisible())
         self.assertFalse(form.run_dialog.openWorkspaceButton.isVisible())
@@ -1039,8 +1015,9 @@ class ModelUITest(unittest.TestCase):
             def execute(args):
                 thread_event.wait()
 
-        form = ModelUITest.make_ui(target_mod=_SampleTarget())
-        form.run()
+        target_mod = _SampleTarget().execute
+        form = FormTest.make_ui()
+        form.run(target=target_mod)
         QTest.keyPress(form.run_dialog, QtCore.Qt.Key_Escape)
         self.assertTrue(form.run_dialog.isVisible())
 
@@ -1063,8 +1040,9 @@ class ModelUITest(unittest.TestCase):
             def execute(args):
                 thread_event.wait()
 
-        form = ModelUITest.make_ui(target_mod=_SampleTarget())
-        form.run()
+        target_mod = _SampleTarget().execute
+        form = FormTest.make_ui()
+        form.run(target=target_mod)
         form.run_dialog.close()
         self.assertTrue(form.run_dialog.isVisible())
 
@@ -1085,14 +1063,15 @@ class ModelUITest(unittest.TestCase):
             def execute(args):
                 raise RuntimeError('Something broke!')
 
-        form = ModelUITest.make_ui(target_mod=_SampleTarget())
-        form.run()
+        target_mod = _SampleTarget().execute
+        form = FormTest.make_ui()
+        form.run(target=target_mod)
         form._thread.join()
 
         self.assertTrue('encountered' in form.run_dialog.messageArea.text())
 
     def test_show(self):
-        form = ModelUITest.make_ui()
+        form = FormTest.make_ui()
         form.show()
 
 
@@ -1130,12 +1109,15 @@ class ExecutionTest(unittest.TestCase):
     def test_print_args(self):
         from natcap.ui.execution import _format_args
 
-        args = {
+        args_iterable = ('foo', 'bar', 'baz')
+
+        args_dict = {
             'some_arg': [1, 2, 3, 4],
             'foo': 'bar',
         }
 
-        args_string = _format_args(args_dict=args)
+        args_string = _format_args(args_iterable=args_iterable,
+                                   args_dict=args_dict)
         expected_string = unicode(
             'Arguments:\n'
             'foo      bar\n'
@@ -1272,7 +1254,7 @@ class ExecutionTest(unittest.TestCase):
                 target=target,
                 args=args,
                 kwargs=kwargs,
-                log_file=log_file,
+                logfile=log_file,
                 tempdir=tempdir)
 
             self.assertEqual(executor.target, target)
@@ -1316,7 +1298,7 @@ class ExecutionTest(unittest.TestCase):
                 target=target,
                 args=args,
                 kwargs=kwargs,
-                log_file=log_file,
+                logfile=log_file,
                 tempdir=tempdir)
 
             self.assertEqual(executor.target, target)

@@ -15,7 +15,7 @@ LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
 DATE_FMT = "%m/%d/%Y %H:%M:%S "
 
 
-def _format_args(args_dict):
+def _format_args(args_iterable, args_dict):
     sorted_args = sorted(args_dict.iteritems(), key=lambda x: x[0])
 
     max_key_width = 0
@@ -129,13 +129,13 @@ class Executor(QtCore.QObject, threading.Thread):
 
     finished = QtCore.Signal()
 
-    def __init__(self, target, args, kwargs, log_file, tempdir=None):
+    def __init__(self, target, args, kwargs, logfile, tempdir=None):
         QtCore.QObject.__init__(self)
         threading.Thread.__init__(self)
         self.target = target
         self.args = args
         self.kwargs = kwargs
-        self.logfile = log_file
+        self.logfile = logfile
         self.tempdir = tempdir
 
         self.failed = False
@@ -150,7 +150,7 @@ class Executor(QtCore.QObject, threading.Thread):
         saved."""
         with log_to_file(self.logfile), manage_tempdir(self.tempdir):
             start_time = time.time()
-            LOGGER.info(_format_args(self.args))
+
             try:
                 LOGGER.debug('Starting target %s with args: \n%s\n%s',
                              self.target,

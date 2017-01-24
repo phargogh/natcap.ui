@@ -9,6 +9,7 @@ import atexit
 
 from qtpy import QtWidgets
 from qtpy import QtCore
+from qtpy import QtGui
 
 import execution
 
@@ -150,26 +151,23 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
         self.message_received.emit(message)
 
     def _write(self, message):
-        self.insertPlainText(QtCore.QString(message))
-        self.textCursor().movePosition(QtWidgets.QTextCursor.End)
+        self.insertPlainText(message)
+        self.textCursor().movePosition(QtGui.QTextCursor.End)
         self.setTextCursor(self.textCursor())
 
 
-class RealtimeMessagesDialog(QtWidgets.QDialog):
-    def __init__(self, window_title=None):
-        QtWidgets.QDialog.__init__(self)
-
-        # set window attributes
-        self.setLayout(QtWidgets.QVBoxLayout())
-        if not window_title:
-            window_title = "Running the model"
-        self.setWindowTitle(window_title)
-        self.resize(700, 500)
-        center_window(self)
-        self.setModal(True)
+class FileSystemRunDialog(object):
+    def __init__(self):
 
         self.is_executing = False
         self.cancel = False
+        self.out_folder = None
+
+        self.dialog = QtWidgets.QDialog()
+        self.dialog.setLayout(QtWidgets.QVBoxLayout())
+        self.dialog.resize(700, 500)
+        center_window(self.dialog)
+        self.dialog.setModal(True)
 
         # create statusArea-related widgets for the window.
         self.statusAreaLabel = QtWidgets.QLabel('Messages:')
@@ -178,6 +176,8 @@ class RealtimeMessagesDialog(QtWidgets.QDialog):
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.NOTSET)
         self.logger.addHandler(self.loghandler)
+
+
 
         # create an indeterminate progress bar.  According to the Qt
         # documentation, an indeterminate progress bar is created when a
@@ -201,18 +201,18 @@ class RealtimeMessagesDialog(QtWidgets.QDialog):
         self.messageArea.clear()
 
         # Add the new widgets to the window
-        self.layout().addWidget(self.statusAreaLabel)
-        self.layout().addWidget(self.log_messages_pane)
-        self.layout().addWidget(self.messageArea)
-        self.layout().addWidget(self.progressBar)
-        self.layout().addWidget(self.openWorkspaceCB)
-        self.layout().addWidget(self.openWorkspaceButton)
+        self.dialog.layout().addWidget(self.statusAreaLabel)
+        self.dialog.layout().addWidget(self.log_messages_pane)
+        self.dialog.layout().addWidget(self.messageArea)
+        self.dialog.layout().addWidget(self.progressBar)
+        self.dialog.layout().addWidget(self.openWorkspaceCB)
+        self.dialog.layout().addWidget(self.openWorkspaceButton)
 
         self.backButton = QtWidgets.QPushButton(' Back')
         self.backButton.setToolTip('Return to parameter list')
 
         # add button icons
-        self.backButton.setIcon(QtWidgets.QIcon(ICON_ENTER))
+        self.backButton.setIcon(QtGui.QIcon(ICON_ENTER))
 
         # disable the 'Back' button by default
         self.backButton.setDisabled(True)
@@ -227,18 +227,23 @@ class RealtimeMessagesDialog(QtWidgets.QDialog):
         self.backButton.clicked.connect(self.closeWindow)
 
         # add the buttonBox to the window.
-        self.layout().addWidget(self.buttonBox)
+        self.dialog.layout().addWidget(self.buttonBox)
 
         # Customize the window title bar to disable the close/minimize/mazimize
         # buttons, just showing the title of the modal dialog.
-        self.setWindowFlags(
+        self.dialog.setWindowFlags(
             QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowTitleHint)
 
     def __del__(self):
         self.logger.removeHandler(self.loghandler)
-        self.deleteLater()
+        self.dialog.deleteLater()
 
-    def start(self):
+    def start(self, window_title, out_folder):
+        if not window_title:
+            window_title = "Running ..."
+        self.dialog.setWindowTitle(window_title)
+        self.out_folder = out_folder
+
         self.is_executing = True
         self.log_messages_pane.clear()
         self.progressBar.setMaximum(0)  # start the progressbar.
@@ -271,7 +276,7 @@ class RealtimeMessagesDialog(QtWidgets.QDialog):
         self.openWorkspaceButton.setVisible(True)
 
     def _request_workspace(self, event=None):
-        open_workspace('/')
+        open_workspace(self.out_dir)
 
     def closeWindow(self):
         """Close the window and ensure the modelProcess has completed.
@@ -987,29 +992,18 @@ class Multi(Container):
             self.add_item(item)
 
 
-class InVESTModelForm(QtGui.QWidget):
-    label = None
-    target = None
-    localdoc = None
-    version = 'UNKNOWN'
+class Form(QtWidgets.QWidget):
 
     submitted = QtCore.Signal()
 
-    def __init__(self, target):
+    def __init__(self):
         QtWidgets.QWidget.__init__(self)
-        self.target = target
-        if not hasattr(self.target, '__call__'):
-            raise ValueError('Target %s must be callable' % target)
-
-        if self.label:
-            self.setWindowTitle(self.label)
 
         self.setLayout(QtWidgets.QVBoxLayout())
 
         self.links = QtWidgets.QLabel()
         self.links.setOpenExternalLinks(True)
         self.links.setAlignment(QtCore.Qt.AlignRight)
-        self._make_links(self.links, self.version)
         self.layout().addWidget(self.links)
 
         self.inputs = Container(label='')
@@ -1030,42 +1024,32 @@ class InVESTModelForm(QtGui.QWidget):
 
         self.buttonbox = QtWidgets.QDialogButtonBox()
         self.run_button = QtWidgets.QPushButton(' Run')
-        self.run_button.setIcon(QtWidgets.QIcon(ICON_ENTER))
+        self.run_button.setIcon(QtGui.QIcon(ICON_ENTER))
 
         self.buttonbox.addButton(
             self.run_button, QtWidgets.QDialogButtonBox.AcceptRole)
         self.layout().addWidget(self.buttonbox)
         self.run_button.pressed.connect(self.run)
 
-        self.run_dialog = RealtimeMessagesDialog()
+        self.run_dialog = FileSystemRunDialog()
 
-    def _make_links(self, qlabel, version_string):
-        links = []
-        try:
-            links.append('Version ' + version_string)
-        except (ImportError, AttributeError):
-            pass
+    def run(self, target, logfile=None, args=(), kwargs=None, tempdir=None,
+            window_title='', out_folder='/'):
 
-        try:
-            doc_uri = 'file://' + os.path.abspath(self.localdoc)
-            links.append('<a href=\"%s\">Model documentation</a>' % doc_uri)
-        except AttributeError:
-            # When self.localdoc is None, documentation is undefined.
-            LOGGER.info('Skipping docs link; undefined.')
+        if not hasattr(target, '__call__'):
+            raise ValueError('Target %s must be callable' % target)
 
-        feedback_uri = 'http://forums.naturalcapitalproject.org/'
-        links.append('<a href=\"%s\">Report an issue</a>' % feedback_uri)
-
-        qlabel.setText(' | '.join(links))
-
-    def run(self):
-        args = self.assemble_args()
-        self._thread = execution.Executor(target, args, kwargs)
+        self._thread = execution.Executor(target,
+                                          args,
+                                          kwargs,
+                                          logfile=logfile,
+                                          tempdir=tempdir)
         self._thread.finished.connect(self._run_finished)
 
         self.run_dialog.loghandler.watch_thread(self._thread.name)
-        self.run_dialog.start()
-        self.run_dialog.show()
+        self.run_dialog.start(window_title=window_title,
+                              out_folder=out_folder)
+        self.run_dialog.dialog.show()
         self._thread.start()
 
     def _run_finished(self):
@@ -1094,6 +1078,3 @@ class InVESTModelForm(QtGui.QWidget):
 
     def add_input(self, input):
         self.inputs.add_input(input)
-
-    def assemble_args(self):
-        raise NotImplementedError
