@@ -16,7 +16,11 @@ from qtpy import QtCore
 from qtpy import QtGui
 from qtpy import QtWidgets
 from qtpy.QtTest import QTest
-import mock
+
+if sys.version_info >= (3,):
+    import unittest.mock as mock
+else:
+    import mock
 
 try:
     QApplication = QtGui.QApplication

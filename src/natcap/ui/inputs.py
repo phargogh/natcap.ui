@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import os
 import threading
 import logging
@@ -11,7 +13,10 @@ from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
 
-import execution
+from . import execution
+
+if sys.version_info >= (3,):
+    unicode = str
 
 LOGGER = logging.getLogger(__name__)
 ICON_FOLDER = 'path/to/icon.png'
