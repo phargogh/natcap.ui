@@ -16,6 +16,7 @@ from qtpy import QtCore
 from qtpy import QtGui
 from qtpy import QtWidgets
 from qtpy.QtTest import QTest
+import six
 
 if sys.version_info >= (3,):
     import unittest.mock as mock
@@ -141,9 +142,9 @@ class InputTest(unittest.TestCase):
 
         try:
             with wait_on_signal(input_instance.value_changed):
-                input_instance.value_changed.emit(unicode('value', 'utf-8'))
+                input_instance.value_changed.emit(six.text_type('value', 'utf-8'))
 
-            callback.assert_called_with(unicode('value', 'utf-8'))
+            callback.assert_called_with(six.text_type('value', 'utf-8'))
         finally:
             input_instance.value_changed.disconnect(callback)
 
@@ -382,14 +383,14 @@ class TextTest(GriddedInputTest):
     def test_value(self):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
-        self.assertTrue(isinstance(input_instance.value(), unicode))
+        self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value(self):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
         input_instance.set_value('foo')
         self.assertEqual(input_instance.value(), u'foo')
-        self.assertTrue(isinstance(input_instance.value(), unicode))
+        self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_value_changed_signal_emitted(self):
         input_instance = self.__class__.create_input(label='text')
@@ -408,7 +409,7 @@ class TextTest(GriddedInputTest):
 
         input_instance.textfield.setText('foo')
         self.assertEqual(input_instance.value(), u'foo')
-        self.assertTrue(isinstance(input_instance.value(), unicode))
+        self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_textfield_settext_signal(self):
         input_instance = self.__class__.create_input(label='text')
@@ -575,7 +576,7 @@ class DropdownTest(GriddedInputTest):
         input_instance = self.__class__.create_input(
             label='label', options=('foo', 'bar', 'baz'))
         self.assertEqual(input_instance.value(), u'foo')
-        self.assertTrue(isinstance(input_instance.value(), unicode))
+        self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_value_changed_signal_emitted(self):
         input_instance = self.__class__.create_input(
@@ -1041,8 +1042,8 @@ class FormTest(unittest.TestCase):
         # close the window.
         thread_event.set()
         QTest.keyPress(form.run_dialog, QtCore.Qt.Key_Escape)
-        self.assertEqual(form.run_dialog.result(), QtGui.QDialog.Rejected)
-        self.assertEqual(form.run_dialog.result(), QtGui.QDialog.Rejected)
+        self.assertEqual(form.run_dialog.result(), QtWidgets.QDialog.Rejected)
+        self.assertEqual(form.run_dialog.result(), QtWidgets.QDialog.Rejected)
 
     def test_run_prevent_dialog_close_event(self):
         thread_event = threading.Event()
@@ -1149,7 +1150,7 @@ class ExecutionTest(unittest.TestCase):
 
         args_string = _format_args(args_iterable=args_iterable,
                                    args_dict=args_dict)
-        expected_string = unicode(
+        expected_string = six.text_type(
             'Arguments:\n'
             'foo      bar\n'
             'some_arg [1, 2, 3, 4]\n')

@@ -8,6 +8,7 @@ import contextlib
 import tempfile
 
 from qtpy import QtCore
+import six
 
 
 LOGGER = logging.getLogger(__name__)
@@ -16,13 +17,13 @@ DATE_FMT = "%m/%d/%Y %H:%M:%S "
 
 
 def _format_args(args_iterable, args_dict):
-    sorted_args = sorted(args_dict.iteritems(), key=lambda x: x[0])
+    sorted_args = sorted(six.iteritems(args_dict), key=lambda x: x[0])
 
     max_key_width = 0
     if len(sorted_args) > 0:
         max_key_width = max(len(x[0]) for x in sorted_args)
 
-    format_str = u"%-" + unicode(str(max_key_width)) + u"s %s"
+    format_str = u"%-" + six.text_type(str(max_key_width)) + u"s %s"
 
     args_string = u'\n'.join([format_str % (arg) for arg in sorted_args])
     args_string = u"Arguments:\n%s\n" % args_string

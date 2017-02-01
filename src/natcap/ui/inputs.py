@@ -12,11 +12,10 @@ import atexit
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
+import six
 
 from . import execution
 
-if sys.version_info >= (3,):
-    unicode = str
 
 LOGGER = logging.getLogger(__name__)
 ICON_FOLDER = 'path/to/icon.png'
@@ -148,7 +147,7 @@ class QLogHandler(logging.StreamHandler):
 
 class LogMessagePane(QtWidgets.QPlainTextEdit):
 
-    message_received = QtCore.Signal(unicode)
+    message_received = QtCore.Signal(six.text_type)
 
     def __init__(self):
         QtWidgets.QPlainTextEdit.__init__(self)
@@ -414,7 +413,7 @@ class FileDialog(object):
             default_path = start_dir
 
         filename = self.file_dialog.getSaveFileName(self.file_dialog, title, default_path)
-        DATA['last_dir'] = os.path.dirname(unicode(filename))
+        DATA['last_dir'] = os.path.dirname(six.text_type(filename))
         return filename
 
     def open_file(self, title, start_dir=None):
@@ -425,7 +424,7 @@ class FileDialog(object):
         os.path.normpath(start_dir)
 
         filename = self.file_dialog.getOpenFileName(self.file_dialog, title, start_dir)
-        DATA['last_dir'] = os.path.dirname(unicode(filename))
+        DATA['last_dir'] = os.path.dirname(six.text_type(filename))
         return filename
 
     def open_folder(self, title, start_dir=None):
@@ -435,7 +434,7 @@ class FileDialog(object):
 
         dirname = self.file_dialog.getExistingDirectory(self.file_dialog, dialog_title,
                                                         start_dir)
-        dirname = unicode(dirname)
+        dirname = six.text_type(dirname)
         DATA['last_dir'] = dirname
         return dirname
 
@@ -443,7 +442,7 @@ class FileDialog(object):
 class _FileSystemButton(QtWidgets.QPushButton):
 
     _icon = ICON_FOLDER
-    path_selected = QtCore.Signal(unicode)
+    path_selected = QtCore.Signal(six.text_type)
 
     def __init__(self, dialog_title):
         QtWidgets.QPushButton.__init__(self)
@@ -478,7 +477,7 @@ class FolderButton(_FileSystemButton):
 
 class Input(QtCore.QObject):
 
-    value_changed = QtCore.Signal(unicode)
+    value_changed = QtCore.Signal(six.text_type)
     interactivity_changed = QtCore.Signal(bool)
 
     def __init__(self, label, helptext=None, required=False, interactive=True,
@@ -537,6 +536,7 @@ class GriddedInput(Input):
             label = label + ' (Optional)'
 
         self._valid = True
+        self._validation_thread = None
         self.validator = validator
         self.label = QtWidgets.QLabel(label)
         self.hideable = hideable
@@ -562,7 +562,6 @@ class GriddedInput(Input):
             QT_APP.processEvents()
 
         self.lock = threading.Lock()
-        self._validation_thread = None
 
     def __del__(self):
         if self._validation_thread != None:
@@ -677,6 +676,7 @@ class GriddedInput(Input):
             # When validation threads aren't part of the equation.
             return self._valid
 
+    @QtCore.Slot(bool)
     def _hideability_changed(self, show_widgets):
         for widget in self.widgets[2:]:
             if not widget:
@@ -684,6 +684,7 @@ class GriddedInput(Input):
             widget.setHidden(not bool(show_widgets))
         self.hidden_changed.emit(bool(show_widgets))
 
+    @QtCore.Slot(bool)
     def set_hidden(self, hidden):
         if not self.hideable:
             raise ValueError('Input is not hideable.')
@@ -811,7 +812,7 @@ class Dropdown(GriddedInput):
         for label in options:
             if type(label) in (int, float):
                 label = str(label)
-            cast_value = unicode(label, 'utf-8')
+            cast_value = six.text_type(label, 'utf-8')
             self.dropdown.addItem(cast_value)
             cast_options.append(cast_value)
         self.options = cast_options
