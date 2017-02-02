@@ -1021,18 +1021,6 @@ class Form(QtWidgets.QWidget):
         self.inputs.setFlat(True)
         self.layout().addWidget(self.inputs)
 
-        self.workspace = Folder(args_key='workspace_dir',
-                                label='Workspace',
-                                required=True)
-        self.suffix = Text(args_key='suffix',
-                           label='Results Suffix',
-                           required=False)
-        # Set the width of the suffix textfield.
-        self.suffix.textfield.setMaximumWidth(150)
-
-        self.add_input(self.workspace)
-        self.add_input(self.suffix)
-
         self.buttonbox = QtWidgets.QDialogButtonBox()
         self.run_button = QtWidgets.QPushButton(' Run')
         self.run_button.setIcon(QtGui.QIcon(ICON_ENTER))
