@@ -1012,11 +1012,6 @@ class Form(QtWidgets.QWidget):
 
         self.setLayout(QtWidgets.QVBoxLayout())
 
-        self.links = QtWidgets.QLabel()
-        self.links.setOpenExternalLinks(True)
-        self.links.setAlignment(QtCore.Qt.AlignRight)
-        self.layout().addWidget(self.links)
-
         self.inputs = Container(label='')
         self.inputs.setFlat(True)
         self.layout().addWidget(self.inputs)
