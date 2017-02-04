@@ -13,21 +13,9 @@ from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
 import six
+import qtawesome
 
 from . import execution
-
-
-LOGGER = logging.getLogger(__name__)
-ICON_FOLDER = 'path/to/icon.png'
-ICON_FILE = 'path/to/icon.png'
-ICON_ENTER = 'path/to/icon.png'
-_QLABEL_STYLE_TEMPLATE = ('QLabel {{padding={padding};'
-                          'background-color={bg_color};'
-                          'border={border};}}')
-QLABEL_STYLE_INFO = _QLABEL_STYLE_TEMPLATE.format(
-    padding='15px', bg_color='#d4efcc', border='2px solid #3e895b')
-QLABEL_STYLE_ERROR = _QLABEL_STYLE_TEMPLATE.format(
-    padding='15px', bg_color='#ebabb6', border='2px solid #a23332')
 
 try:
     QApplication = QtGui.QApplication
@@ -37,6 +25,19 @@ except AttributeError:
 QT_APP = QApplication.instance()
 if QT_APP is None:
     QT_APP = QApplication(sys.argv)  # pragma: no cover
+
+LOGGER = logging.getLogger(__name__)
+ICON_FOLDER = qtawesome.icon('fa.folder-o')
+ICON_FILE = qtawesome.icon('fa.file-o')
+ICON_ENTER = qtawesome.icon('fa.arrow-circle-o-right',
+                            color='green')
+_QLABEL_STYLE_TEMPLATE = ('QLabel {{padding={padding};'
+                          'background-color={bg_color};'
+                          'border={border};}}')
+QLABEL_STYLE_INFO = _QLABEL_STYLE_TEMPLATE.format(
+    padding='15px', bg_color='#d4efcc', border='2px solid #3e895b')
+QLABEL_STYLE_ERROR = _QLABEL_STYLE_TEMPLATE.format(
+    padding='15px', bg_color='#ebabb6', border='2px solid #a23332')
 
 def _cleanup():
     # Adding this allows tests to run on linux via `python setup.py nosetests`
@@ -338,10 +339,12 @@ class ValidButton(InfoButton):
         # clear..
 
         if errors:
-            self.setText('X')
+            self.setIcon(qtawesome.icon('fa.times',
+                                        color='red'))
             error_string = '<br/>'.join(errors)
         else:
-            self.setText(u"\u2713")  # checkmark
+            self.setIcon(qtawesome.icon('fa.check',
+                                        color='green'))
             error_string = 'Validation successful'
         self.setWhatsThis(error_string)
 
@@ -446,6 +449,7 @@ class _FileSystemButton(QtWidgets.QPushButton):
 
     def __init__(self, dialog_title):
         QtWidgets.QPushButton.__init__(self)
+        self.setIcon(self._icon)
         self.dialog_title = dialog_title
         self.dialog = FileDialog()
         self.open_method = None  # This should be overridden
