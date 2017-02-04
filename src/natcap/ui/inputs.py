@@ -1006,6 +1006,7 @@ class Multi(Container):
 class Form(QtWidgets.QWidget):
 
     submitted = QtCore.Signal()
+    run_finished = QtCore.Signal()
 
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
@@ -1023,7 +1024,7 @@ class Form(QtWidgets.QWidget):
         self.buttonbox.addButton(
             self.run_button, QtWidgets.QDialogButtonBox.AcceptRole)
         self.layout().addWidget(self.buttonbox)
-        self.run_button.pressed.connect(self.run)
+        self.run_button.pressed.connect(self.submitted.emit)
 
         self.run_dialog = FileSystemRunDialog()
 
@@ -1053,6 +1054,7 @@ class Form(QtWidgets.QWidget):
         self.run_dialog.finish(
             exception_found=(self._thread.exception is not None),
             thread_exception=self._thread.exception)
+        self.run_finished.emit()
 
     def showEvent(self, event=None):
         _apply_sizehint(self.inputs)
