@@ -1,110 +1,14 @@
 import threading
 import os
 import logging
-import time
 import pprint
 import traceback
-import contextlib
 import tempfile
 
 from qtpy import QtCore
-import six
 
 
 LOGGER = logging.getLogger(__name__)
-LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
-DATE_FMT = "%m/%d/%Y %H:%M:%S "
-
-
-def _format_args(args_iterable, args_dict):
-    sorted_args = sorted(six.iteritems(args_dict), key=lambda x: x[0])
-
-    max_key_width = 0
-    if len(sorted_args) > 0:
-        max_key_width = max(len(x[0]) for x in sorted_args)
-
-    format_str = u"%-" + six.text_type(str(max_key_width)) + u"s %s"
-
-    args_string = u'\n'.join([format_str % (arg) for arg in sorted_args])
-    args_string = u"Arguments:\n%s\n" % args_string
-    return args_string
-
-
-def format_time(seconds):
-    """Render the integer number of seconds as a string.  Returns a string.
-    """
-    hours, remainder = divmod(seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-
-    hours = int(hours)
-    minutes = int(minutes)
-
-    if hours > 0:
-        return "%sh %sm %ss" % (hours, minutes, seconds)
-
-    if minutes > 0:
-        return "%sm %ss" % (minutes, seconds)
-    return "%ss" % seconds
-
-
-class ThreadFilter(logging.Filter):
-    """When used, this filters out log messages that were recorded from other
-    threads.  This is especially useful if we have logging coming from several
-    concurrent threads.
-    Arguments passed to the constructor:
-        thread_name - the name of the thread to identify.  If the record was
-            reported from this thread name, it will be passed on.
-    """
-    def __init__(self, thread_name):
-        logging.Filter.__init__(self)
-        self.thread_name = thread_name
-
-    def filter(self, record):
-        if record.threadName == self.thread_name:
-            return True
-        return False
-
-
-@contextlib.contextmanager
-def log_to_file(logfile):
-    if os.path.exists(logfile):
-        LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
-
-    handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
-    formatter = logging.Formatter(LOG_FMT, DATE_FMT)
-    thread_filter = ThreadFilter(threading.current_thread().name)
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.NOTSET)  # capture everything
-    root_logger.addHandler(handler)
-    handler.addFilter(thread_filter)
-    handler.setFormatter(formatter)
-    yield
-    handler.close()
-    root_logger.removeHandler(handler)
-
-
-@contextlib.contextmanager
-def manage_tempdir(new_tempdir=None):
-    """Context manager for resetting the previous tempfile.tempdir.
-
-    When the context manager is exited, ``tempfile.tempdir`` is reset to its
-    previous value.
-
-    Parameters:
-        new_tempdir (string): The folder that should be the new temporary
-            directory.  If None, the system default will be used.  See
-            https://docs.python.org/2/library/tempfile.html#tempfile.tempdir
-            for details.
-
-    Returns:
-        ``None``
-    """
-    LOGGER.info('Setting tempfile.tempdir to %s', new_tempdir)
-    previous_tempdir = tempfile.tempdir
-    tempfile.tempdir = new_tempdir
-    yield
-    LOGGER.info('Resetting tempfile.tempdir to %s', previous_tempdir)
-    tempfile.tempdir = previous_tempdir
 
 
 class Executor(QtCore.QObject, threading.Thread):
@@ -158,24 +62,19 @@ class Executor(QtCore.QObject, threading.Thread):
         handler.  If an exception is raised in either the loading or execution
         of the module or function, a traceback is printed and the exception is
         saved."""
-        with log_to_file(self.logfile), manage_tempdir(self.tempdir):
-            start_time = time.time()
-
-            try:
-                LOGGER.debug('Starting target %s with args: \n%s\n%s',
-                             self.target,
-                             pprint.pformat(self.args),
-                             pprint.pformat(self.kwargs))
-                self.target(*self.args, **self.kwargs)
-            except Exception as error:
-                # We deliberately want to catch all possible exceptions.
-                LOGGER.exception(error)
-                self.failed = True
-                self.exception = error
-                self.traceback = traceback.format_exc()
-            finally:
-                elapsed_time = round(time.time() - start_time, 2)
-                LOGGER.info('Elapsed time: %s', format_time(elapsed_time))
-                LOGGER.info('Execution finished')
+        try:
+            LOGGER.debug('Starting target %s with args: \n%s\n%s',
+                         self.target,
+                         pprint.pformat(self.args),
+                         pprint.pformat(self.kwargs))
+            self.target(*self.args, **self.kwargs)
+        except Exception as error:
+            # We deliberately want to catch all possible exceptions.
+            LOGGER.exception(error)
+            self.failed = True
+            self.exception = error
+            self.traceback = traceback.format_exc()
+        finally:
+            LOGGER.info('Execution finished')
 
         self.finished.emit()
