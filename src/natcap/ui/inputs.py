@@ -712,6 +712,9 @@ class Text(GriddedInput):
         return self.textfield.text()
 
     def set_value(self, value):
+        if value and self.hideable:
+            self.set_hidden(False)
+
         if isinstance(value, int) or isinstance(value, float):
             value = str(value)
         self.textfield.setText(value)
