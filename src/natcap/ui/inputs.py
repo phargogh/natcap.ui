@@ -118,8 +118,10 @@ class MessageArea(QtWidgets.QLabel):
         QtWidgets.QLabel.__init__(self)
         self.setWordWrap(True)
         self.setTextFormat(QtCore.Qt.RichText)
+        self.error = False
 
     def set_error(self, is_error):
+        self.error = is_error
         if is_error:
             self.setStyleSheet(QLABEL_STYLE_ERROR)
         else:
@@ -133,17 +135,10 @@ class QLogHandler(logging.StreamHandler):
         self._stream = stream_widget
         self.setLevel(logging.NOTSET)  # capture everything
 
-        self.formatter = logging.Formatter(execution.LOG_FMT,
-                                           execution.DATE_FMT)
+        self.formatter = logging.Formatter(
+            fmt='%(asctime)s %(name)-18s %(levelname)-8s %(message)s',
+            datefmt='%m/%d/%Y %H:%M:%S ')
         self.setFormatter(self.formatter)
-        self.thread_filter = None
-
-    def watch_thread(self, thread_id):
-        if self.thread_filter:
-            self.removeFilter(self.thread_filter)
-
-        self.thread_filter = execution.ThreadFilter(thread_id)
-        self.addFilter(self.thread_filter)
 
 
 class LogMessagePane(QtWidgets.QPlainTextEdit):
@@ -186,8 +181,6 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.NOTSET)
         self.logger.addHandler(self.loghandler)
-
-
 
         # create an indeterminate progress bar.  According to the Qt
         # documentation, an indeterminate progress bar is created when a
@@ -352,7 +345,8 @@ class ValidButton(InfoButton):
 class HelpButton(InfoButton):
     def __init__(self, default_message=None):
         InfoButton.__init__(self, default_message)
-        self.setText('?')
+        self.setIcon(qtawesome.icon('fa.info-circle',
+                                    color='blue'))
 
 
 class ValidationWorker(QtCore.QObject):
@@ -548,7 +542,7 @@ class GriddedInput(Input):
         if helptext:
             self.help_button = HelpButton(helptext)
         else:
-            self.help_button = None
+            self.help_button = QtWidgets.QWidget()  # empty widget!
 
         self.widgets = [
             self.valid_button,
@@ -602,22 +596,19 @@ class GriddedInput(Input):
                 validator_ref = self.validator
             else:
                 if not self.args_key:
-                    LOGGER.info('Validation: No validator and no args_id defined; '
-                                'skipping.  Input assumed to be valid.')
+                    LOGGER.info(('Validation: No validator and no args_id defined; '
+                                 'skipping.  Input assumed to be valid. %s'),
+                                self)
                     self._validation_finished(new_validity=True)
                     return
                 else:
-                    # Get the validator from the parent.
-                    if not self.parent():
-                        raise RuntimeError(
-                            'Validation requires defined validator or parent')
-
-                    try:
-                        validator_ref = getattr(self.parent().target, 'validate')
-                    except AttributeError:
-                        raise RuntimeError(
-                            'No validate function found for module %s' % (
-                                self.parent().target.__name__))
+                    # args key defined, but a validator is not; input assumed
+                    # to be valid.
+                    LOGGER.info(('Validation: args_key defined, but no '
+                                 'validator defined.  Input assumed to be '
+                                 'valid. %s'), self)
+                    self._validation_finished(new_validity=True)
+                    return
 
             try:
                 args = self.parent().assemble_args()
@@ -646,7 +637,8 @@ class GriddedInput(Input):
             QT_APP.processEvents()
         except Exception:
             QT_APP.processEvents()
-            LOGGER.exception('Error found, releasing lock.')
+            LOGGER.exception('Error found when validating %s, releasing lock.',
+                             self)
             self.lock.release()
             raise
         QT_APP.processEvents()
@@ -680,7 +672,7 @@ class GriddedInput(Input):
             # When validation threads aren't part of the equation.
             return self._valid
 
-    @QtCore.Slot(bool)
+    @QtCore.Slot(int)
     def _hideability_changed(self, show_widgets):
         for widget in self.widgets[2:]:
             if not widget:
@@ -688,7 +680,7 @@ class GriddedInput(Input):
             widget.setHidden(not bool(show_widgets))
         self.hidden_changed.emit(bool(show_widgets))
 
-    @QtCore.Slot(bool)
+    @QtCore.Slot(int)
     def set_hidden(self, hidden):
         if not self.hideable:
             raise ValueError('Input is not hideable.')
@@ -720,6 +712,8 @@ class Text(GriddedInput):
         return self.textfield.text()
 
     def set_value(self, value):
+        if isinstance(value, int) or isinstance(value, float):
+            value = str(value)
         self.textfield.setText(value)
 
 
@@ -1045,7 +1039,6 @@ class Form(QtWidgets.QWidget):
                                           tempdir=tempdir)
         self._thread.finished.connect(self._run_finished)
 
-        self.run_dialog.loghandler.watch_thread(self._thread.name)
         self.run_dialog.start(window_title=window_title,
                               out_folder=out_folder)
         QT_APP.processEvents()
