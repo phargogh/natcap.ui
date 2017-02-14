@@ -1035,10 +1035,31 @@ class Form(QtWidgets.QWidget):
         QtWidgets.QWidget.__init__(self)
 
         self.setLayout(QtWidgets.QVBoxLayout())
-
         self.inputs = Container(label='')
         self.inputs.setFlat(True)
-        self.layout().addWidget(self.inputs)
+
+        # Have the inputs take up as much space as needed
+        self.inputs.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding,
+            QtWidgets.QSizePolicy.Expanding)
+
+        # Make the inputs container scrollable.
+        self.scroll_area = QtWidgets.QScrollArea()
+        self.layout().addWidget(self.scroll_area)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.verticalScrollBar().rangeChanged.connect(
+            self.update_scroll_border)
+        self.update_scroll_border(
+            self.scroll_area.verticalScrollBar().minimum(),
+            self.scroll_area.verticalScrollBar().maximum())
+        self.scroll_area.setWidget(self.inputs)
+
+        # set the sizehint of the inputs again ... needed after setting
+        # scroll_area.
+        if self.inputs.sizeHint().isValid():
+            self.inputs.setMinimumSize(self.inputs.sizeHint())
+        self.layout().setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
+        self.inputs.layout().setSizeConstraint(QtWidgets.QLayout.SetMinimumSize)
 
         self.buttonbox = QtWidgets.QDialogButtonBox()
         self.run_button = QtWidgets.QPushButton(' Run')
@@ -1050,6 +1071,12 @@ class Form(QtWidgets.QWidget):
         self.run_button.pressed.connect(self.submitted.emit)
 
         self.run_dialog = FileSystemRunDialog()
+
+    def update_scroll_border(self, min, max):
+        if min == 0 and max == 0:
+            self.scroll_area.setStyleSheet("QScrollArea { border: None } ")
+        else:
+            self.scroll_area.setStyleSheet("")
 
     def run(self, target, logfile=None, args=(), kwargs=None, tempdir=None,
             window_title='', out_folder='/'):
