@@ -908,6 +908,7 @@ class Container(QtWidgets.QGroupBox, Input):
 
     def add_input(self, input):
         input._add_to(layout=self.layout())
+        _apply_sizehint(self.layout().parent())
 
     def _add_to(self, layout):
         layout.addWidget(self,
@@ -1034,6 +1035,10 @@ class Form(QtWidgets.QWidget):
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
 
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding,
+            QtWidgets.QSizePolicy.Expanding)
+
         self.setLayout(QtWidgets.QVBoxLayout())
         self.inputs = Container(label='')
         self.inputs.setFlat(True)
@@ -1104,24 +1109,6 @@ class Form(QtWidgets.QWidget):
             exception_found=(self._thread.exception is not None),
             thread_exception=self._thread.exception)
         self.run_finished.emit()
-
-    def showEvent(self, event=None):
-        _apply_sizehint(self.inputs)
-        # adjust the window size when we show it.
-        screen_geometry = QtWidgets.QDesktopWidget().availableGeometry()
-
-        # 50 pads the width by a scrollbar or so
-        # 100 pads the width for the scrollbar and a little more.
-        width = min(screen_geometry.width()-50,
-                    self.inputs.minimumSizeHint().width()+100)
-
-        screen_height = screen_geometry.height() * 0.95
-        # 100 pads the height for buttons, menu bars.
-        height = min(self.inputs.minimumSizeHint().height()+100, screen_height)
-
-        self.resize(width, height)
-        self.raise_()  # bring the window to the front.  Needed on macs.
-        QtWidgets.QWidget.showEvent(self, event)
 
     def add_input(self, input):
         self.inputs.add_input(input)
