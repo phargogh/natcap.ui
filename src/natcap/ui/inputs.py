@@ -835,7 +835,11 @@ class Dropdown(GriddedInput):
         for label in options:
             if type(label) in (int, float):
                 label = str(label)
-            cast_value = six.text_type(label, 'utf-8')
+            try:
+                cast_value = six.text_type(label, 'utf-8')
+            except TypeError:
+                # It's already unicode, so can't decode further.
+                cast_value = label
             self.dropdown.addItem(cast_value)
             cast_options.append(cast_value)
         self.options = cast_options
