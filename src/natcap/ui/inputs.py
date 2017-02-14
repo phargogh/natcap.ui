@@ -864,8 +864,8 @@ class Dropdown(GriddedInput):
 
 
 class Label(QtWidgets.QLabel):
-    def __init__(self, *args, **kwargs):
-        QtWidgets.QLabel.__init__(self, *args, **kwargs)
+    def __init__(self, text):
+        QtWidgets.QLabel.__init__(self, text)
         self.setWordWrap(True)
         self.setOpenExternalLinks(True)
 
