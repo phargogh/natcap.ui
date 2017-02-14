@@ -496,6 +496,12 @@ class Input(QtCore.QObject):
     def set_value(self):
         raise NotImplementedError
 
+    def set_required(self, required):
+        self.required = required
+
+    def set_noninteractive(self, noninteractive):
+        self.set_interactive(not noninteractive)
+
     def set_interactive(self, enabled):
         self.interactive = enabled
         for widget in self.widgets:
@@ -768,6 +774,7 @@ class Checkbox(GriddedInput):
     # Re-setting interactivity_changed to avoid a segfault while testing on
     # linux via `python setup.py nosetests`.
     interactivity_changed = QtCore.Signal(bool)
+    sufficiency_changed = QtCore.Signal(bool)
 
     def __init__(self, label, helptext=None, interactive=True, args_key=None):
         GriddedInput.__init__(self, label=label, helptext=helptext,
@@ -778,6 +785,14 @@ class Checkbox(GriddedInput):
         self.checkbox.stateChanged.connect(self.value_changed.emit)
         self.widgets[0] = None  # No need for a valid button
         self.widgets[1] = self.checkbox  # replace label with checkbox
+
+    def _check_sufficiency(self, event=None):
+        current_sufficiency = self.sufficient
+        new_sufficiency = bool(self.value) and self.interactive
+
+        if current_sufficiency != new_sufficiency:
+            self.sufficient = new_sufficiency
+            self.sufficiency_changed(new_sufficiency)
 
     def value(self):
         return self.checkbox.isChecked()
