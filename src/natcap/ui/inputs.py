@@ -715,13 +715,52 @@ class GriddedInput(Input):
 
 
 class Text(GriddedInput):
+    class FileField(QtWidgets.QLineEdit):
+        def __init__(self, starting_value=''):
+            QtWidgets.QLineEdit.__init__(self, starting_value)
+            self.setAcceptDrops(True)
+
+        def dragEnterEvent(self, event=None):
+            """Overriding the default dragEnterEvent function for when a file is
+            dragged and dropped onto this qlineedit.  This reimplementation is
+            necessary for the dropEvent function to work on Windows."""
+            # If the user tries to drag multiple files into this text field,
+            # reject the event!
+            if event.mimeData().hasUrls() and len(event.mimeData().urls()) == 1:
+                event.accept()
+            else:
+                event.ignore()
+
+        def dropEvent(self, event=None):
+            """Overriding the default Qt DropEvent function when a file is
+            dragged and dropped onto this qlineedit."""
+            path = event.mimeData().urls()[0].path()
+            if platform.system() == 'Windows':
+                path = path[1:]  # Remove the '/' ahead of disk letter
+            elif platform.system() == 'Darwin':
+                # On mac, we need to ask the OS nicely for the fileid.
+                # This is only needed on Qt<5.4.1.
+                # See bug report at https://bugreports.qt.io/browse/QTBUG-40449
+                command = (
+                    "osascript -e 'get posix path of my posix file \""
+                    "file://{fileid}\" -- kthx. bai'").format(
+                        fileid=path)
+                process = subprocess.Popen(
+                    command, shell=True,
+                    stderr=subprocess.STDOUT,
+                    stdout=subprocess.PIPE)
+                path = process.communicate()[0].lstrip().rstrip()
+
+            event.accept()
+            self.setText(path)
+
     def __init__(self, label, helptext=None, required=False, interactive=True,
                  args_key=None, hideable=False, validator=None):
         GriddedInput.__init__(self, label=label, helptext=helptext,
                               required=required, interactive=interactive,
                               args_key=args_key, hideable=hideable,
                               validator=validator)
-        self.textfield = QtWidgets.QLineEdit()
+        self.textfield = Text.FileField()
         self.textfield.textChanged.connect(self._text_changed)
         self.widgets[2] = self.textfield
 
