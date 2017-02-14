@@ -847,11 +847,16 @@ class Dropdown(GriddedInput):
     def set_value(self, value):
         # Handle case where value is of the type provided by the user,
         # and the case where it's been converted to a utf-8 string.
-        try:
-            index = self.options.index(value)
-        except (IndexError, ValueError):
-            index = self.user_options.index(value)
-        self.dropdown.setCurrentIndex(index)
+        for options_attr in ('options', 'user_options'):
+            try:
+                index = getattr(self, options_attr).index(value)
+                self.dropdown.setCurrentIndex(index)
+                return
+            except ValueError:
+                # ValueError when the value is not in the list
+                pass
+        raise ValueError('Value %s not in options %s or user options %s' % (
+            value, self.options, self.user_options))
 
 
 class Label(QtWidgets.QLabel):
