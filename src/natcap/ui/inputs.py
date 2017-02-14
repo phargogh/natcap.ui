@@ -531,6 +531,7 @@ class GriddedInput(Input):
 
     hidden_changed = QtCore.Signal(bool)
     validity_changed = QtCore.Signal(bool)
+    sufficiency_changed = QtCore.Signal(bool)
 
     def __init__(self, label, helptext=None, required=False, interactive=True,
                  args_key=None, hideable=False, validator=None):
@@ -544,6 +545,7 @@ class GriddedInput(Input):
         self.validator = validator
         self.label = QtWidgets.QLabel(label)
         self.hideable = hideable
+        self.sufficient = False  # False until value set and interactive
         self.valid_button = ValidButton()
         if helptext:
             self.help_button = HelpButton(helptext)
@@ -566,6 +568,20 @@ class GriddedInput(Input):
             QT_APP.processEvents()
 
         self.lock = threading.Lock()
+
+        self.value_changed.connect(self._check_sufficiency)
+        self.interactivity_changed.connect(self._check_sufficiency)
+
+    def _check_sufficiency(self, event=None):
+        new_sufficiency = bool(self.value()) and self.interactive
+
+        LOGGER.debug('Sufficiency for %s %s --> %s', self,
+                     self.sufficient, new_sufficiency)
+
+        if self.sufficient != new_sufficiency:
+            self.sufficient = new_sufficiency
+            self.sufficiency_changed.emit(new_sufficiency)
+
 
     def __del__(self):
         if self._validation_thread != None:
@@ -774,7 +790,6 @@ class Checkbox(GriddedInput):
     # Re-setting interactivity_changed to avoid a segfault while testing on
     # linux via `python setup.py nosetests`.
     interactivity_changed = QtCore.Signal(bool)
-    sufficiency_changed = QtCore.Signal(bool)
 
     def __init__(self, label, helptext=None, interactive=True, args_key=None):
         GriddedInput.__init__(self, label=label, helptext=helptext,
@@ -785,14 +800,6 @@ class Checkbox(GriddedInput):
         self.checkbox.stateChanged.connect(self.value_changed.emit)
         self.widgets[0] = None  # No need for a valid button
         self.widgets[1] = self.checkbox  # replace label with checkbox
-
-    def _check_sufficiency(self, event=None):
-        current_sufficiency = self.sufficient
-        new_sufficiency = bool(self.value) and self.interactive
-
-        if current_sufficiency != new_sufficiency:
-            self.sufficient = new_sufficiency
-            self.sufficiency_changed(new_sufficiency)
 
     def value(self):
         return self.checkbox.isChecked()
