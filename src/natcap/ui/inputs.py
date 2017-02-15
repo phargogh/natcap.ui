@@ -863,12 +863,13 @@ class Checkbox(GriddedInput):
     def __init__(self, label, helptext=None, interactive=True, args_key=None):
         GriddedInput.__init__(self, label=label, helptext=helptext,
                               interactive=interactive, args_key=args_key,
-                              hideable=False, validator=None)
+                              hideable=False, validator=None, required=True)
 
         self.checkbox = QtWidgets.QCheckBox(label)
         self.checkbox.stateChanged.connect(self.value_changed.emit)
         self.widgets[0] = None  # No need for a valid button
         self.widgets[1] = self.checkbox  # replace label with checkbox
+        self.satisfied = True
 
     def value(self):
         return self.checkbox.isChecked()
@@ -883,13 +884,17 @@ class Checkbox(GriddedInput):
 class Dropdown(GriddedInput):
     def __init__(self, label, helptext=None, interactive=True, args_key=None,
                  hideable=False, options=()):
+        # Dropdowns are always required ... there isn't a way for the dropdown
+        # to *not* provide a value, so it always produces a value and is always
+        # satisfied.
         GriddedInput.__init__(self, label=label, helptext=helptext,
                               interactive=interactive, args_key=args_key,
-                              hideable=hideable, validator=None)
+                              hideable=hideable, validator=None, required=True)
         self.dropdown = QtWidgets.QComboBox()
         self.widgets[2] = self.dropdown
         self.set_options(options)
         self.dropdown.currentIndexChanged.connect(self._index_changed)
+        self.satisfied = True
 
         # Init hideability if needed
         if self.hideable:
