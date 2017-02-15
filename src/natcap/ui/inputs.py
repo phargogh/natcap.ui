@@ -232,10 +232,8 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         # add the buttonBox to the window.
         self.layout().addWidget(self.buttonBox)
 
-        # Customize the window title bar to disable the close/minimize/mazimize
-        # buttons, just showing the title of the modal dialog.
-        self.setWindowFlags(
-            QtCore.Qt.CustomizeWindowHint | QtCore.Qt.WindowTitleHint)
+        # Indicate that this window should be styled like a dialog.
+        self.setWindowFlags(QtCore.Qt.Dialog)
 
     def __del__(self):
         self.logger.removeHandler(self.loghandler)
