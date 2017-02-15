@@ -63,10 +63,6 @@ class Executor(QtCore.QObject, threading.Thread):
         of the module or function, a traceback is printed and the exception is
         saved."""
         try:
-            LOGGER.debug('Starting target %s with args: \n%s\n%s',
-                         self.target,
-                         pprint.pformat(self.args),
-                         pprint.pformat(self.kwargs))
             self.target(*self.args, **self.kwargs)
         except Exception as error:
             # We deliberately want to catch all possible exceptions.
