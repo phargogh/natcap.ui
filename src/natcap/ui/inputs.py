@@ -715,6 +715,57 @@ class GriddedInput(Input):
 
 
 class Text(GriddedInput):
+    class TextField(QtWidgets.QLineEdit):
+        def __init__(self, starting_value=''):
+            QtWidgets.QLineEdit.__init__(self, starting_value)
+            self.setAcceptDrops(True)
+
+        def dragEnterEvent(self, event=None):
+            if event.mimeData().hasText() and not event.mimeData().hasUrls():
+                LOGGER.info('Accepting drag enter event for "%s"',
+                            event.mimeData().text())
+                event.accept()
+            else:
+                LOGGER.info('Rejecting drag enter event for "%s"',
+                            event.mimeData().text())
+                event.ignore()
+
+        def dropEvent(self, event=None):
+            """Overriding the default Qt DropEvent function when a file is
+            dragged and dropped onto this qlineedit."""
+            text = event.mimeData().text()
+            LOGGER.info('Accepting and inserting dropped text: "%s"', text)
+            event.accept()
+            self.setText(text)
+
+    def __init__(self, label, helptext=None, required=False, interactive=True,
+                 args_key=None, hideable=False, validator=None):
+        GriddedInput.__init__(self, label=label, helptext=helptext,
+                              required=required, interactive=interactive,
+                              args_key=args_key, hideable=hideable,
+                              validator=validator)
+        self.textfield = Text.TextField()
+        self.textfield.textChanged.connect(self._text_changed)
+        self.widgets[2] = self.textfield
+
+    def _text_changed(self, new_text):
+        self.dirty = True
+        self.value_changed.emit(new_text)
+        self._validate()
+
+    def value(self):
+        return self.textfield.text()
+
+    def set_value(self, value):
+        if value and self.hideable:
+            self.set_hidden(False)
+
+        if isinstance(value, int) or isinstance(value, float):
+            value = str(value)
+        self.textfield.setText(value)
+
+
+class _Path(Text):
     class FileField(QtWidgets.QLineEdit):
         def __init__(self, starting_value=''):
             QtWidgets.QLineEdit.__init__(self, starting_value)
@@ -727,8 +778,12 @@ class Text(GriddedInput):
             # If the user tries to drag multiple files into this text field,
             # reject the event!
             if event.mimeData().hasUrls() and len(event.mimeData().urls()) == 1:
+                LOGGER.info('Accepting drag enter event for "%s"',
+                            event.mimeData().text())
                 event.accept()
             else:
+                LOGGER.info('Rejecting drag enter event for "%s"',
+                            event.mimeData().text())
                 event.ignore()
 
         def dropEvent(self, event=None):
@@ -751,41 +806,16 @@ class Text(GriddedInput):
                     stdout=subprocess.PIPE)
                 path = process.communicate()[0].lstrip().rstrip()
 
+            LOGGER.info('Accepting drop event with path: "%s"', path)
             event.accept()
             self.setText(path)
 
     def __init__(self, label, helptext=None, required=False, interactive=True,
                  args_key=None, hideable=False, validator=None):
-        GriddedInput.__init__(self, label=label, helptext=helptext,
-                              required=required, interactive=interactive,
-                              args_key=args_key, hideable=hideable,
-                              validator=validator)
-        self.textfield = Text.FileField()
-        self.textfield.textChanged.connect(self._text_changed)
-        self.widgets[2] = self.textfield
-
-    def _text_changed(self, new_text):
-        self.dirty = True
-        self.value_changed.emit(new_text)
-        self._validate()
-
-    def value(self):
-        return self.textfield.text()
-
-    def set_value(self, value):
-        if value and self.hideable:
-            self.set_hidden(False)
-
-        if isinstance(value, int) or isinstance(value, float):
-            value = str(value)
-        self.textfield.setText(value)
-
-
-class _Path(Text):
-    def __init__(self, label, helptext=None, required=False, interactive=True,
-                 args_key=None, hideable=False, validator=None):
         Text.__init__(self, label, helptext, required, interactive, args_key,
                       hideable, validator=validator)
+        self.textfield = _Path.FileField()
+        self.textfield.textChanged.connect(self._text_changed)
 
         self.widgets = [
             self.valid_button,
