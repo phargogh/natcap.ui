@@ -259,6 +259,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         self.is_executing = False
         self.progressBar.setMaximum(1)  # stops the progressbar.
         self.backButton.setDisabled(False)
+
         if exception_found:
             self.messageArea.set_error(True)
             self.messageArea.setText(
@@ -266,9 +267,15 @@ class FileSystemRunDialog(QtWidgets.QDialog):
                  'See the log for details.') % (
                     thread_exception.__class__.__name__,
                     thread_exception))
+            self.messageArea.setStyleSheet(
+                'QLabel { padding: 15px;'
+                'background-color: #ebabb6; border: 2px solid #a23332;}')
         else:
             self.messageArea.set_error(False)
             self.messageArea.setText('Model completed successfully.')
+            self.messageArea.setStyleSheet(
+                'QLabel { padding: 15px;'
+                'background-color: #d4efcc; border: 2px solid #3e895b;}')
 
         # Change the open workspace presentation.
         if self.openWorkspaceCB.isChecked():
