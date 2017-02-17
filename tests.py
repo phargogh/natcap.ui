@@ -196,6 +196,43 @@ class InputTest(unittest.TestCase):
         container = Container(label='Some container')
         container.add_input(input_instance)
 
+    def test_visibility(self):
+        from natcap.ui import inputs
+        input_instance = self.__class__.create_input(label='foo',
+                                                     interactive=False)
+        self.assertEqual(input_instance.visible(), True)
+
+        input_instance.set_visible(False)
+        inputs.QT_APP.processEvents()
+        if len(input_instance.widgets) > 0:  # only works if input has widgets
+            self.assertEqual(input_instance.visible(), False)
+
+        input_instance.set_visible(True)
+        inputs.QT_APP.processEvents()
+        if len(input_instance.widgets) > 0:  # only works if input has widgets
+            self.assertEqual(input_instance.visible(), True)
+
+    def test_visiblity_when_shown(self):
+        from natcap.ui import inputs
+        container = inputs.Container(label='sample container')
+        input_instance = self.__class__.create_input(label='foo',
+                                                     interactive=False)
+        container.add_input(input_instance)
+        container.show()
+        inputs.QT_APP.processEvents()
+
+        self.assertEqual(input_instance.visible(), True)
+
+        input_instance.set_visible(False)
+        inputs.QT_APP.processEvents()
+        if len(input_instance.widgets) > 0:  # only works if input has widgets
+            self.assertEqual(input_instance.visible(), False)
+
+        input_instance.set_visible(True)
+        inputs.QT_APP.processEvents()
+        if len(input_instance.widgets) > 0:  # only works if input has widgets
+            self.assertEqual(input_instance.visible(), True)
+
 
 class GriddedInputTest(InputTest):
     @staticmethod
@@ -1222,3 +1259,46 @@ class ExecutionTest(unittest.TestCase):
             self.assertTrue(isinstance(executor.traceback, basestring))
         finally:
             shutil.rmtree(tempdir)
+
+
+class IntegrationTests(unittest.TestCase):
+    def test_checkbox_enables_collapsible_container(self):
+        from natcap.ui import inputs
+        checkbox = inputs.Checkbox(label='Trigger')
+        container = inputs.Container(label='Container',
+                                     expandable=True,
+                                     expanded=False,
+                                     interactive=False)
+        # Interactivity of the contained file is dependent upon the
+        # collapsed state of the container.
+        contained_file = inputs.File(label='some file input')
+        container.add_input(contained_file)
+        checkbox.value_changed.connect(container.set_interactive)
+
+        # Assert everything starts out fine.
+        self.assertTrue(checkbox.interactive)
+        self.assertFalse(container.interactive)
+        self.assertFalse(container.expanded)
+        self.assertFalse(contained_file.interactive)
+        self.assertFalse(contained_file.visible())
+
+        # When the checkbox is enabled, the container should become enabled,
+        # but the container's contained widgets should still be noninteractive
+        checkbox.set_value(True)
+        inputs.QT_APP.processEvents()
+
+        self.assertTrue(container.interactive)
+        self.assertFalse(container.expanded)
+        self.assertFalse(contained_file.interactive)
+        self.assertFalse(contained_file.visible())
+
+        # When the container is expanded, the contained input should become
+        # interactive and visible
+        container.set_value(True)
+        inputs.QT_APP.processEvents()
+
+        self.assertTrue(container.interactive)
+        self.assertTrue(container.expanded)
+        self.assertTrue(contained_file.interactive)
+        self.assertTrue(contained_file.visible())
+

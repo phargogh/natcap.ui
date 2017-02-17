@@ -8,6 +8,7 @@ import subprocess
 import warnings
 import sys
 import atexit
+import itertools
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -482,6 +483,7 @@ class Input(QtCore.QObject):
 
     value_changed = QtCore.Signal(six.text_type)
     interactivity_changed = QtCore.Signal(bool)
+    sufficiency_changed = QtCore.Signal(bool)
 
     def __init__(self, label, helptext=None, required=False, interactive=True,
                  args_key=None):
@@ -494,6 +496,37 @@ class Input(QtCore.QObject):
         self.args_key = args_key
         self.helptext = helptext
         self.lock = threading.Lock()
+        self.sufficient = False
+        self._visible_hint = True
+
+        self.value_changed.connect(self._check_sufficiency)
+        self.interactivity_changed.connect(self._check_sufficiency)
+
+    def _check_sufficiency(self, event=None):
+        new_sufficiency = bool(self.value()) and self.interactive
+
+        LOGGER.debug('Sufficiency for %s %s --> %s', self,
+                     self.sufficient, new_sufficiency)
+
+        if self.sufficient != new_sufficiency:
+            self.sufficient = new_sufficiency
+            self.sufficiency_changed.emit(new_sufficiency)
+
+    def visible(self):
+        return self._visible_hint
+
+    def set_visible(self, visible_hint):
+        # Qt visibility is actually controlled by containers and the parent
+        # window.
+        # We use self._visible_hint to indicate whether the widgets should
+        # be considered by natcap.ui as being visible.
+        self._visible_hint = visible_hint
+        if any(widget.parent().isVisible() for widget in self.widgets
+               if widget and widget.parent()):
+            for widget in self.widgets:
+                if not widget:
+                    continue
+                widget.setVisible(self._visible_hint)
 
     def value(self):
         raise NotImplementedError
@@ -536,7 +569,6 @@ class GriddedInput(Input):
 
     hidden_changed = QtCore.Signal(bool)
     validity_changed = QtCore.Signal(bool)
-    sufficiency_changed = QtCore.Signal(bool)
 
     def __init__(self, label, helptext=None, required=False, interactive=True,
                  args_key=None, hideable=False, validator=None):
@@ -573,20 +605,6 @@ class GriddedInput(Input):
             QT_APP.processEvents()
 
         self.lock = threading.Lock()
-
-        self.value_changed.connect(self._check_sufficiency)
-        self.interactivity_changed.connect(self._check_sufficiency)
-
-    def _check_sufficiency(self, event=None):
-        new_sufficiency = bool(self.value()) and self.interactive
-
-        LOGGER.debug('Sufficiency for %s %s --> %s', self,
-                     self.sufficient, new_sufficiency)
-
-        if self.sufficient != new_sufficiency:
-            self.sufficient = new_sufficiency
-            self.sufficiency_changed.emit(new_sufficiency)
-
 
     def __del__(self):
         if self._validation_thread != None:
@@ -960,18 +978,36 @@ class Container(QtWidgets.QGroupBox, Input):
     # need to redefine signals here.
     value_changed = QtCore.Signal(bool)
     interactivity_changed = QtCore.Signal(bool)
+    sufficiency_changed = QtCore.Signal(bool)
 
     def __init__(self, label, interactive=True, expandable=False,
                  expanded=True, args_key=None):
         QtWidgets.QGroupBox.__init__(self)
         Input.__init__(self, label=label, interactive=interactive,
                        args_key=args_key)
+        self.widgets = [self]
         self.setCheckable(expandable)
         if self.isCheckable():
             self.setChecked(expanded)
         self.setTitle(label)
         self.setLayout(QtWidgets.QGridLayout())
+        self.set_interactive(interactive)
         self.toggled.connect(self.value_changed.emit)
+
+        self.toggled.connect(self._hide_widgets)
+        self.toggled.emit(self.isChecked())  # initialize
+
+    @QtCore.Slot(bool)
+    def _hide_widgets(self, check_state):
+        for layout_item in (self.layout().itemAtPosition(*coords)
+                            for coords in itertools.product(
+                                xrange(1, self.layout().rowCount()),
+                                xrange(1, self.layout().columnCount()))):
+            if layout_item and self.isVisible():
+                layout_item.widget().setVisible(self.isChecked())
+
+        # Update size based on sizehint now that widgets changed.
+        self.setMinimumSize(self.sizeHint())
 
     @property
     def expanded(self):
@@ -984,7 +1020,7 @@ class Container(QtWidgets.QGroupBox, Input):
         if not self.expandable:
             raise ValueError('Container cannot be expanded when not '
                              'expandable')
-        return self.setChecked(value)
+        self.setChecked(value)
 
     @property
     def expandable(self):
@@ -997,6 +1033,18 @@ class Container(QtWidgets.QGroupBox, Input):
     def add_input(self, input):
         input._add_to(layout=self.layout())
         _apply_sizehint(self.layout().parent())
+
+        if self.expandable:
+            input.set_visible(self.expanded)
+            input.set_interactive(self.expanded)
+
+            if self.isVisible():
+                for widget in input.widgets:
+                    if not widget:
+                        continue
+                    widget.setVisible(self.expanded)
+        self.sufficiency_changed.connect(input.set_interactive)
+        self.sufficiency_changed.connect(input.set_visible)
 
     def _add_to(self, layout):
         layout.addWidget(self,
