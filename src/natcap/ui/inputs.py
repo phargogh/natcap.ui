@@ -987,15 +987,19 @@ class Container(QtWidgets.QGroupBox, Input):
                        args_key=args_key)
         self.widgets = [self]
         self.setCheckable(expandable)
-        if self.isCheckable():
+        if expandable:
             self.setChecked(expanded)
         self.setTitle(label)
         self.setLayout(QtWidgets.QGridLayout())
         self.set_interactive(interactive)
         self.toggled.connect(self.value_changed.emit)
-
         self.toggled.connect(self._hide_widgets)
-        self.toggled.emit(self.isChecked())  # initialize
+        self.value_changed.connect(self._check_sufficiency)
+        self.interactivity_changed.connect(self._check_sufficiency)
+
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding,  # horizontal
+            QtWidgets.QSizePolicy.MinimumExpanding)  # vertical
 
     @QtCore.Slot(bool)
     def _hide_widgets(self, check_state):
@@ -1008,6 +1012,12 @@ class Container(QtWidgets.QGroupBox, Input):
 
         # Update size based on sizehint now that widgets changed.
         self.setMinimumSize(self.sizeHint())
+        #self.resize(self.sizeHint())
+
+    def showEvent(self, event=None):
+        if self.isCheckable():
+            self._hide_widgets(self.value())
+        self.resize(self.sizeHint())
 
     @property
     def expanded(self):
@@ -1182,7 +1192,7 @@ class Form(QtWidgets.QWidget):
         # Have the inputs take up as much space as needed
         self.inputs.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding,
-            QtWidgets.QSizePolicy.Expanding)
+            QtWidgets.QSizePolicy.Minimum)
 
         # Make the inputs container scrollable.
         self.scroll_area = QtWidgets.QScrollArea()
