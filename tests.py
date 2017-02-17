@@ -77,11 +77,21 @@ class InputTest(unittest.TestCase):
 
     def test_noninteractive(self):
         input_instance = self.__class__.create_input(label='foo', interactive=False)
+        # Silence notimplementederror exceptions on input.value in some cases.
+        try:
+            input_instance.value()
+        except NotImplementedError:
+            input_instance.value = lambda: 'Value!'
         self.assertEqual(input_instance.interactive, False)
 
     def test_set_interactive(self):
         input_instance = self.__class__.create_input(label='foo', interactive=False)
         self.assertEqual(input_instance.interactive, False)
+        # Silence notimplementederror exceptions on input.value in some cases.
+        try:
+            input_instance.value()
+        except NotImplementedError:
+            input_instance.value = lambda: 'Value!'
         input_instance.set_interactive(True)
         self.assertEqual(input_instance.interactive, True)
 
@@ -91,6 +101,10 @@ class InputTest(unittest.TestCase):
         input_instance.interactivity_changed.connect(callback)
 
         with wait_on_signal(input_instance.interactivity_changed):
+            try:
+                input_instance.value()
+            except NotImplementedError:
+                input_instance.value = lambda: 'Value!'
             input_instance.set_interactive(True)
 
         callback.assert_called_with(True)
@@ -142,6 +156,10 @@ class InputTest(unittest.TestCase):
 
         try:
             with wait_on_signal(input_instance.value_changed):
+                try:
+                    input_instance.value()
+                except NotImplementedError:
+                    input_instance.value = lambda: 'Value!'
                 input_instance.value_changed.emit(six.text_type('value', 'utf-8'))
 
             callback.assert_called_with(six.text_type('value', 'utf-8'))
@@ -154,6 +172,11 @@ class InputTest(unittest.TestCase):
         input_instance.interactivity_changed.connect(callback)
 
         with wait_on_signal(input_instance.interactivity_changed):
+            try:
+                input_instance.value()
+            except NotImplementedError:
+                input_instance.value = lambda: 'Value!'
+
             input_instance.interactivity_changed.emit(True)
 
         callback.assert_called_with(True)
@@ -205,7 +228,8 @@ class GriddedInputTest(InputTest):
 
     def test_no_helptext(self):
         input_instance = self.__class__.create_input(label='foo')
-        self.assertTrue(isinstance(input_instance.help_button, type(None)))
+        self.assertTrue(isinstance(input_instance.help_button,
+                                   QtWidgets.QWidget))
 
     def test_validate_passes(self):
         #"""UI: Validation that passes should affect validity."""
@@ -269,32 +293,6 @@ class GriddedInputTest(InputTest):
         # Validation still passes, but verify warning raised
         self.assertEqual(len(messages), 1)
         self.assertEqual(input_instance.valid(), True)
-
-    def test_validate_parent_required(self):
-        input_instance = self.__class__.create_input(
-            label='some_label', required=True, args_key='something')
-
-        input_instance.value = mock.MagicMock(
-            input_instance, return_value=u'something else')
-
-        with self.assertRaises(RuntimeError):
-            input_instance._validate()
-
-    def test_validate_target_required(self):
-        input_instance = self.__class__.create_input(
-            label='some_label', required=True, args_key='something')
-        input_instance.value = mock.MagicMock(
-            input_instance, return_value=u'something else')
-
-        class _SampleModule(object):
-            __name__ = '_SampleModule'
-
-        class _SampleParent(object):
-            target = _SampleModule()
-
-        input_instance.parent = mock.MagicMock(return_value=_SampleParent())
-        with self.assertRaises(RuntimeError):
-            input_instance._validate()
 
     def test_nonhideable_default_state(self):
         sample_widget = QtWidgets.QWidget()
@@ -498,6 +496,10 @@ class CheckboxTest(GriddedInputTest):
         input_instance.set_value(True)
         self.assertEqual(input_instance.valid(), True)
 
+    def test_label(self):
+        # Override, sinve 'Optional' is irrelevant for Checkbox.
+        pass
+
     def test_validator(self):
         pass
 
@@ -535,12 +537,6 @@ class CheckboxTest(GriddedInputTest):
         pass
 
     def test_validate_required_args_key(self):
-        pass
-
-    def test_validate_parent_required(self):
-        pass
-
-    def test_validate_target_required(self):
         pass
 
 
@@ -590,6 +586,10 @@ class DropdownTest(GriddedInputTest):
 
         callback.assert_called_with('bar')
 
+    def test_label(self):
+        # Override, sinve 'Optional' is irrelevant for Dropdown.
+        pass
+
     def test_validator(self):
         pass
 
@@ -612,12 +612,6 @@ class DropdownTest(GriddedInputTest):
         pass
 
     def test_validate_required_args_key(self):
-        pass
-
-    def test_validate_parent_required(self):
-        pass
-
-    def test_validate_target_required(self):
         pass
 
 
@@ -1138,134 +1132,6 @@ class OpenWorkspaceTest(unittest.TestCase):
 
 
 class ExecutionTest(unittest.TestCase):
-    def test_print_args(self):
-        from natcap.ui.execution import _format_args
-
-        args_iterable = ('foo', 'bar', 'baz')
-
-        args_dict = {
-            'some_arg': [1, 2, 3, 4],
-            'foo': 'bar',
-        }
-
-        args_string = _format_args(args_iterable=args_iterable,
-                                   args_dict=args_dict)
-        expected_string = six.text_type(
-            'Arguments:\n'
-            'foo      bar\n'
-            'some_arg [1, 2, 3, 4]\n')
-        self.assertEqual(args_string, expected_string)
-
-    def test_format_time_hours(self):
-        from natcap.ui.execution import format_time
-
-        seconds = 3667
-        self.assertEqual(format_time(seconds), '1h 1m 7s')
-
-    def test_format_time_minutes(self):
-        from natcap.ui.execution import format_time
-
-        seconds = 67
-        self.assertEqual(format_time(seconds), '1m 7s')
-
-    def test_format_time_seconds(self):
-        from natcap.ui.execution import format_time
-
-        seconds = 7
-        self.assertEqual(format_time(seconds), '7s')
-
-    def test_thread_filter_same_thread(self):
-        from natcap.ui.execution import ThreadFilter
-
-        # name, level, pathname, lineno, msg, args, exc_info, func=None
-        record = logging.LogRecord(
-            name='foo',
-            level=logging.INFO,
-            pathname=__file__,
-            lineno=500,
-            msg='some logging message',
-            args=(),
-            exc_info=None,
-            func='test_thread_filter_same_thread')
-        filterer = ThreadFilter(threading.currentThread().name)
-
-        # The record comes from the same thread.
-        self.assertEqual(filterer.filter(record), True)
-
-    def test_thread_filter_different_thread(self):
-        from natcap.ui.execution import ThreadFilter
-
-        # name, level, pathname, lineno, msg, args, exc_info, func=None
-        record = logging.LogRecord(
-            name='foo',
-            level=logging.INFO,
-            pathname=__file__,
-            lineno=500,
-            msg='some logging message',
-            args=(),
-            exc_info=None,
-            func='test_thread_filter_same_thread')
-        filterer = ThreadFilter('Thread-nonexistent')
-
-        # The record comes from the same thread.
-        self.assertEqual(filterer.filter(record), False)
-
-    def test_log_to_file(self):
-        class _LogThread(threading.Thread):
-            def __init__(self, filename):
-                threading.Thread.__init__(self)
-                self.filename = filename
-                self.event = threading.Event()
-
-            def run(self):
-                from natcap.ui.execution import log_to_file
-                with log_to_file(self.filename):
-                    _logger = logging.getLogger(__name__)
-                    _logger.debug('debug message')
-                    _logger.info('info message')
-                    self.event.wait()
-                    _logger.warning('warning message')
-                    _logger.error('error message')
-                    _logger.critical('critical message')
-
-        tempdir = tempfile.mkdtemp()
-        try:
-            logfilepath = os.path.join(tempdir, 'logfile.txt')
-
-            # Ensure that the logfile can overwrite existing logfiles.
-            with open(logfilepath, 'w') as logfile:
-                logfile.write('This logfile already exists!')
-
-            test_thread = _LogThread(logfilepath)
-            test_thread.start()
-
-            # inject a logmessage that should not appear
-            _root_logger = logging.getLogger()
-            _root_logger.info('this should not appear')
-            test_thread.event.set()  # Resume threaded logging
-            test_thread.join()
-
-            # read the file, ensure only 5 lines.
-            # "this should not appear" should not be in the text, either.
-            with open(logfilepath) as logfile:
-                file_contents = logfile.read().strip()
-                self.assertEqual(len(file_contents.split('\n')), 5)
-                self.assertTrue('this should not appear' not in file_contents)
-        finally:
-            shutil.rmtree(tempdir)
-
-    def test_manage_tempdir(self):
-        from natcap.ui.execution import manage_tempdir
-
-        starting_tempdir = tempfile.gettempdir()
-        new_tempdir = tempfile.mkdtemp()
-        try:
-            with manage_tempdir(new_tempdir=new_tempdir):
-                self.assertEqual(tempfile.gettempdir(), new_tempdir)
-            self.assertEqual(tempfile.gettempdir(), starting_tempdir)
-        finally:
-            shutil.rmtree(new_tempdir)
-
     def test_executor_run(self):
         from natcap.ui.execution import Executor
 
