@@ -981,10 +981,13 @@ class Container(QtWidgets.QGroupBox, Input):
     sufficiency_changed = QtCore.Signal(bool)
 
     def __init__(self, label, interactive=True, expandable=False,
-                 expanded=True, args_key=None):
+                 expanded=True, args_key=None, helptext=None):
         QtWidgets.QGroupBox.__init__(self)
         Input.__init__(self, label=label, interactive=interactive,
                        args_key=args_key)
+        self.helptext = helptext
+        if self.helptext:
+            warnings.warn('helptext option is currently ignored for Containers')
         self.widgets = [self]
         self.setCheckable(expandable)
         if expandable:
@@ -1087,13 +1090,15 @@ class Multi(Container):
             self.remove_requested.emit(self.index)
 
     def __init__(self, label, callable_, interactive=True, args_key=None,
-                 link_text='Add Another'):
+                 link_text='Add Another', helptext=None):
+        self.items = []
         Container.__init__(self,
                            label=label,
                            interactive=interactive,
                            args_key=args_key,
                            expandable=False,
-                           expanded=True)
+                           expanded=True,
+                           helptext=helptext)
 
         if not hasattr(callable_, '__call__'):
             raise ValueError("Callable passed to Multi is not callable.")
@@ -1102,13 +1107,12 @@ class Multi(Container):
         self.add_link = QtWidgets.QLabel('<a href="add_new">%s</a>' % link_text)
         self.add_link.linkActivated.connect(self._add_templated_item)
         self._append_add_link()
-        self.items = []
         self.remove_buttons = []
 
     def value(self):
         return [input_.value() for input_ in self.items]
 
-    def set_value(self, *values):
+    def set_value(self, values):
         self.clear()
         for input_value in values:
             new_input_instance = self.callable_()
@@ -1145,6 +1149,8 @@ class Multi(Container):
                          col_index,
                          1,  # span 1 row
                          1)  # span 1 column
+        self.setMinimumSize(self.sizeHint())
+        self.update()
 
     def _append_add_link(self):
         layout = self.layout()
