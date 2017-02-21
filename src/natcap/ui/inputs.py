@@ -924,7 +924,11 @@ class Dropdown(GriddedInput):
             self._hideability_changed(False)
 
     def _index_changed(self, newindex):
-        self.value_changed.emit(self.options[newindex])
+        try:
+            self.value_changed.emit(self.options[newindex])
+        except IndexError:
+            # When options are cleared and there is no current index
+            self.value_changed.emit(-1)
 
     def set_options(self, options):
         self.dropdown.clear()
