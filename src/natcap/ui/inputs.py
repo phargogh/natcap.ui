@@ -928,7 +928,7 @@ class Dropdown(GriddedInput):
             self.value_changed.emit(self.options[newindex])
         except IndexError:
             # When options are cleared and there is no current index
-            self.value_changed.emit(-1)
+            self.value_changed.emit('')
 
     def set_options(self, options):
         self.dropdown.clear()
