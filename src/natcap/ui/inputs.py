@@ -285,7 +285,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         self.openWorkspaceButton.setVisible(True)
 
     def _request_workspace(self, event=None):
-        open_workspace(self.out_dir)
+        open_workspace(self.out_folder)
 
     def closeWindow(self):
         """Close the window and ensure the modelProcess has completed.
@@ -1063,6 +1063,11 @@ class Container(QtWidgets.QGroupBox, Input):
         self.sufficiency_changed.connect(input.set_interactive)
         self.sufficiency_changed.connect(input.set_visible)
 
+        if isinstance(input, Multi):
+            def _update_sizehints():
+                self.setMinimumSize(self.sizeHint())
+            input.input_added.connect(_update_sizehints)
+
     def _add_to(self, layout):
         layout.addWidget(self,
                          layout.rowCount(),  # target row
@@ -1080,6 +1085,7 @@ class Container(QtWidgets.QGroupBox, Input):
 class Multi(Container):
 
     value_changed = QtCore.Signal(list)
+    input_added = QtCore.Signal()
 
     class _RemoveButton(QtWidgets.QPushButton):
 
@@ -1153,8 +1159,10 @@ class Multi(Container):
                          col_index,
                          1,  # span 1 row
                          1)  # span 1 column
+        QT_APP.processEvents()
         self.setMinimumSize(self.sizeHint())
         self.update()
+        self.input_added.emit()
 
     def _append_add_link(self):
         layout = self.layout()
