@@ -10,6 +10,7 @@ import sys
 import atexit
 import itertools
 
+import qtpy
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
@@ -426,7 +427,11 @@ class FileDialog(object):
         # Allow us to open folders with spaces in them.
         os.path.normpath(start_dir)
 
-        filename = self.file_dialog.getOpenFileName(self.file_dialog, title, start_dir)
+        result = self.file_dialog.getOpenFileName(self.file_dialog, title, start_dir)
+        if int(qtpy.QT_VERSION[0]) == 5:  # pyqt5
+            filename, last_filter = result
+        else:  # pyqt4
+            filename = result
         DATA['last_dir'] = os.path.dirname(six.text_type(filename))
         return filename
 
