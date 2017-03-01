@@ -611,6 +611,9 @@ class GriddedInput(Input):
 
         self.lock = threading.Lock()
 
+        # initialize visibility, as we've changed the input's widgets
+        self.set_visible(self.visible)
+
     def _validate(self):
         self.lock.acquire()
 
