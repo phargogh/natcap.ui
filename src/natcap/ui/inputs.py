@@ -710,12 +710,13 @@ class GriddedInput(Input):
             raise
 
     def _validation_finished(self, validation_warnings):
-        LOGGER.info('Cleaning up validation for %s', self)
+        LOGGER.info('Cleaning up validation for %s.  Warnings: %s',
+                    self, validation_warnings)
+        new_validity = bool(validation_warnings)
         if validation_warnings:
             self.valid_button.set_errors(validation_warnings)
-            new_validity = False
         else:
-            new_validity = True
+            self.valid_button.set_errors([])
 
         current_validity = self._valid
         self._valid = new_validity
