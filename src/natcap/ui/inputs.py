@@ -115,6 +115,38 @@ def center_window(window_ptr):
     window_ptr.move(geometry.topLeft())
 
 
+class Validator(QtCore.QObject):
+
+    started = QtCore.Signal()
+    finished = QtCore.Signal(list)
+
+    def __init__(self, parent):
+        QtCore.QObject.__init__(self, parent)
+        self._validation_thread = QtCore.QThread(parent=self)
+        self._validation_thread.start()
+        self._validation_worker = None
+
+    def validate(self, target, args, limit_to=None):
+        self.started.emit()
+        self._validation_worker = ValidationWorker(
+            target=target,
+            args=args,
+            limit_to=limit_to)
+        self._validation_worker.moveToThread(self._validation_thread)
+
+        def _finished():
+            LOGGER.info('Finished validation for args_key %s', limit_to)
+            warnings_ = [w[1] for w in self._validation_worker.warnings
+                         if limit_to in w[0] or not limit_to]
+            LOGGER.debug(warnings_)
+            self.finished.emit(warnings_)
+            self._validation_worker.deleteLater()
+            self._validation_thread.quit()
+
+        self._validation_worker.finished.connect(_finished)
+        self._validation_worker.start()
+
+
 class MessageArea(QtWidgets.QLabel):
     def __init__(self):
         QtWidgets.QLabel.__init__(self)
@@ -583,8 +615,9 @@ class GriddedInput(Input):
             label = label + ' (Optional)'
 
         self._valid = True
-        self._validation_thread = None
-        self.validator = validator
+        self.validator_ref = validator
+        self._validator = Validator(self)
+        self._validator.finished.connect(self._validation_finished)
         self.label = QtWidgets.QLabel(label)
         self.hideable = hideable
         self.sufficient = False  # False until value set and interactive
@@ -623,27 +656,27 @@ class GriddedInput(Input):
             if self.required:
                 if not self.value():
                     LOGGER.info('Validation: input is required and has no value')
-                    self.valid_button.set_errors(['Input is required'])
-                    self._validation_finished(new_validity=False)
+                    self._validation_finished(
+                        validation_warnings=['Input is required'])
                     return
 
                 if self.value() and not self.args_key:
                     warnings.warn(('Validation: %s instance has no args_key, but '
                                 'must to validate.  Skipping.') %
                                 self.__class__.__name__)
-                    self._validation_finished(new_validity=True)
+                    self._validation_finished(validation_warnings=None)
                     return
 
-            if self.validator:
-                LOGGER.info('Validation: validator taken from self.validator: %s',
-                            self.validator)
-                validator_ref = self.validator
+            if self.validator_ref:
+                LOGGER.info('Validation: validator taken from self.validator_ref: %s',
+                            self.validator_ref)
+                validator_ref = self.validator_ref
             else:
                 if not self.args_key:
                     LOGGER.info(('Validation: No validator and no args_id defined; '
                                  'skipping.  Input assumed to be valid. %s'),
                                 self)
-                    self._validation_finished(new_validity=True)
+                    self._validation_finished(validation_warnings=None)
                     return
                 else:
                     # args key defined, but a validator is not; input assumed
@@ -651,7 +684,7 @@ class GriddedInput(Input):
                     LOGGER.info(('Validation: args_key defined, but no '
                                  'validator defined.  Input assumed to be '
                                  'valid. %s'), self)
-                    self._validation_finished(new_validity=True)
+                    self._validation_finished(validation_warnings=None)
                     return
 
             try:
@@ -665,46 +698,30 @@ class GriddedInput(Input):
                 ('Starting validation thread for %s with target:%s, args:%s, '
                  'limit_to:%s'),
                 self, validator_ref, args, self.args_key)
-            if not self._validation_thread or not self._validation_thread.isRunning():
-                self._validation_thread = QtCore.QThread(parent=self)
-                self._validation_thread.start()
 
-            self._validation_worker = ValidationWorker(
+            self._validator.validate(
                 target=validator_ref,
                 args=args,
                 limit_to=self.args_key)
-            self._validation_worker.moveToThread(self._validation_thread)
-            self._validation_worker.finished.connect(
-                self._validation_thread_finished)
-            self._validation_worker.start()
-
-            QT_APP.processEvents()
         except Exception:
-            QT_APP.processEvents()
             LOGGER.exception('Error found when validating %s, releasing lock.',
                              self)
             self.lock.release()
             raise
-        QT_APP.processEvents()
 
-    def _validation_finished(self, new_validity):
+    def _validation_finished(self, validation_warnings):
         LOGGER.info('Cleaning up validation for %s', self)
+        if validation_warnings:
+            self.valid_button.set_errors(validation_warnings)
+            new_validity = False
+        else:
+            new_validity = True
+
         current_validity = self._valid
         self._valid = new_validity
         self.lock.release()
         if current_validity != new_validity:
             self.validity_changed.emit(new_validity)
-
-    def _validation_thread_finished(self):
-        self._validation_thread.quit()
-
-        LOGGER.info('Validation thread finished for %s', self)
-        warnings_ = [w[1] for w in self._validation_worker.warnings
-                     if self.args_key in w[0]]
-        self.valid_button.set_errors(warnings_)
-        new_validity = len(warnings_) == 0
-        self._validation_finished(new_validity)
-        self._validation_worker.deleteLater()
 
     def valid(self):
         # TODO: wait until the lock is released.
