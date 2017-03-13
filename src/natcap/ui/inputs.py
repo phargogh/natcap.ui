@@ -609,16 +609,16 @@ class GriddedInput(Input):
 
     def __init__(self, label, helptext=None, required=False, interactive=True,
                  args_key=None, hideable=False, validator=None):
-        Input.__init__(self, label=label, helptext=helptext, required=required,
-                       interactive=interactive, args_key=args_key)
         if not required:
             label = label + ' (Optional)'
+        Input.__init__(self, label=label, helptext=helptext, required=required,
+                       interactive=interactive, args_key=args_key)
 
         self._valid = True
         self.validator_ref = validator
         self._validator = Validator(self)
         self._validator.finished.connect(self._validation_finished)
-        self.label = QtWidgets.QLabel(label)
+        self.label_widget = QtWidgets.QLabel(self.label)
         self.hideable = hideable
         self.sufficient = False  # False until value set and interactive
         self.valid_button = ValidButton()
@@ -629,16 +629,16 @@ class GriddedInput(Input):
 
         self.widgets = [
             self.valid_button,
-            self.label,
+            self.label_widget,
             None,
             None,
             self.help_button,
         ]
 
         if self.hideable:
-            self.label = QtWidgets.QCheckBox(self.label.text())
-            self.widgets[1] = self.label
-            self.label.stateChanged.connect(self._hideability_changed)
+            self.label_widget = QtWidgets.QCheckBox(self.label_widget.text())
+            self.widgets[1] = self.label_widget
+            self.label_widget.stateChanged.connect(self._hideability_changed)
             self._hideability_changed(True)
             QT_APP.processEvents()
 
@@ -710,9 +710,9 @@ class GriddedInput(Input):
             raise
 
     def _validation_finished(self, validation_warnings):
-        LOGGER.info('Cleaning up validation for %s.  Warnings: %s',
-                    self, validation_warnings)
-        new_validity = bool(validation_warnings)
+        new_validity = not bool(validation_warnings)
+        LOGGER.info('Cleaning up validation for %s.  Warnings: %s.  Valid: %s',
+                    self, validation_warnings, new_validity)
         if validation_warnings:
             self.valid_button.set_errors(validation_warnings)
         else:
@@ -746,11 +746,11 @@ class GriddedInput(Input):
     def set_hidden(self, hidden):
         if not self.hideable:
             raise ValueError('Input is not hideable.')
-        self.label.setChecked(not hidden)
+        self.label_widget.setChecked(not hidden)
 
     def hidden(self):
         if self.hideable:
-            return not self.label.isChecked()
+            return not self.label_widget.isChecked()
         return False
 
 
@@ -859,7 +859,7 @@ class _Path(Text):
 
         self.widgets = [
             self.valid_button,
-            self.label,
+            self.label_widget,
             self.textfield,
             None,
             self.help_button,
