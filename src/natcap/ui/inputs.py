@@ -136,8 +136,10 @@ class Validator(QtCore.QObject):
 
         def _finished():
             LOGGER.info('Finished validation for args_key %s', limit_to)
-            warnings_ = [w[1] for w in self._validation_worker.warnings
-                         if limit_to in w[0] or not limit_to]
+            warnings_ = [w for w in self._validation_worker.warnings]
+            #    warnings_ = [w[1] for w in self._validation_worker.warnings
+            #                 if limit_to in w[0] or not limit_to]
+
             LOGGER.debug(warnings_)
             self.finished.emit(warnings_)
             self._validation_worker.deleteLater()
@@ -711,10 +713,12 @@ class GriddedInput(Input):
 
     def _validation_finished(self, validation_warnings):
         new_validity = not bool(validation_warnings)
+        appliccable_warnings = [w[1] for w in validation_warnings
+                                if self.args_key in w[0]]
         LOGGER.info('Cleaning up validation for %s.  Warnings: %s.  Valid: %s',
-                    self, validation_warnings, new_validity)
-        if validation_warnings:
-            self.valid_button.set_errors(validation_warnings)
+                    self, appliccable_warnings, new_validity)
+        if appliccable_warnings:
+            self.valid_button.set_errors(appliccable_warnings)
         else:
             self.valid_button.set_errors([])
 
