@@ -907,7 +907,7 @@ class Checkbox(GriddedInput):
     def __init__(self, label, helptext=None, interactive=True, args_key=None):
         GriddedInput.__init__(self, label=label, helptext=helptext,
                               interactive=interactive, args_key=args_key,
-                              hideable=False, validator=None, required=True)
+                              hideable=False, validator=None, required=False)
 
         self.checkbox = QtWidgets.QCheckBox(label)
         self.checkbox.stateChanged.connect(self.value_changed.emit)
